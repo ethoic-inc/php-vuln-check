@@ -20,7 +20,7 @@
 - `scan` reads PHP-FPM pool `php_value` / `php_admin_value` overrides from the conventional `php-fpm.conf` and includes; reports `fatal_error_backtraces`. Mitigations reordered to PHP's advisory order.
 - Reports warn when `DATA_CHECKED` is more than 30 days old. **Bump `DATA_CHECKED` whenever advisory data is re-checked**, even if nothing changed.
 - CI leg `ubuntu-24.04 without package docs` passes on real Ubuntu (PATCHED via the USN table, pool override read).
-- The community profile page shows every item checked except content reports (a repo setting, Settings > Moderation options). The API's `health_percentage` stays at 87 because it only detects the legacy single-file issue template; the page is the one that counts.
+- Community profile is at 100% (API `health_percentage` 100) since content reports were turned on (Settings > Moderation options > Reported content).
 
 ## Next
 1. Watch Issues and Discussions; wrong-detection reports (label `detection`) are the best signal.
