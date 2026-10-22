@@ -1,6 +1,6 @@
 # php-vuln-check: rules for AI assistants
 
-A zero-dependency Python CLI that finds PHP installs exposed to known PHP vulnerabilities, starting with PHP2Shell (CVE-2026-109618 / CVE-2026-109619). Public repo: `jake-bowser/php-vuln-check`.
+A zero-dependency Python CLI that finds PHP installs exposed to known PHP vulnerabilities, starting with PHP2Shell (CVE-2026-109618 / CVE-2026-109619). Public repo: `ethoic-inc/php-vuln-check`.
 
 ## Rules that must hold
 - **Single file, standard library only.** `php_vuln_check.py` is piped to remote hosts by `fleet`, so it cannot import anything else. Keep it Python 3.6-compatible (no walrus, no dataclasses, no `capture_output`).
@@ -17,3 +17,4 @@ A zero-dependency Python CLI that finds PHP installs exposed to known PHP vulner
 - CI also runs the tool against real PHP installed by apt (`real-php` job). Keep it green.
 - Start of session: `git pull`, read this file and `docs/HANDOFF.md`. End of session: update `docs/HANDOFF.md`, commit, push.
 - Branches: `claude/<topic>` or `codex/<topic>`, merged by PR. Do not push to `main` directly.
+- **Contact:** the public contact address is hello@ethoic.com (Ethoic Inc's choice). Do not put personal email addresses in docs, metadata or the site.

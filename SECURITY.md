@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability in php-vuln-check
 
-Please use GitHub's private vulnerability reporting: **Security tab → Report a vulnerability**. Do not open a public issue for anything exploitable.
+Please use GitHub's private vulnerability reporting: **Security tab → Report a vulnerability**. Do not open a public issue for anything exploitable. If you cannot use GitHub, email hello@ethoic.com.
 
 Of particular interest: command injection through host files or URLs (`fleet`, `url`), unsafe handling of paths given to `--path`, and any case where the tool could be tricked into reporting PATCHED for a vulnerable install.
 

@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://jake-bowser.github.io/php-vuln-check/sitemap.xml
+Sitemap: https://ethoic-inc.github.io/php-vuln-check/sitemap.xml
