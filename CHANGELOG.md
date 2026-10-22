@@ -1,10 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.1.3 (2026-10-22)
 
 - `scan`: when a Debian/Ubuntu package changelog is not installed (Docker's `ubuntu` and `debian` images strip `/usr/share/doc`), compare the package with the fixed builds in the vendor notice (`vendor_fixed` in `ADVISORIES`, starting with Ubuntu USN-8948-1). Before, these installs were always REVIEW. A fixed build only counts for the same build line, so Sury or other-release builds are never judged against it.
 - `scan`: read PHP-FPM pool overrides (`php_value` / `php_admin_value` for the tracked settings) from the conventional `php-fpm.conf` and its includes, and report `fatal_error_backtraces` (PHP 8.5).
 - Mitigations reordered to match PHP's advisory: `memory_limit=-1` in admin config first, then `session.upload_progress.enabled=0` (and `fatal_error_backtraces=0` on 8.5), and the multipart block only for applications that take no uploads.
+- Reports warn when the advisory data is more than 30 days old (`DATA_CHECKED`), so a stale copy never looks authoritative.
 - CI: an Ubuntu 24.04 run with the image's default of no package docs, which must report the distro PHP as PATCHED and show a pool override.
 
 ## 0.1.2 (2026-10-22)

@@ -134,7 +134,7 @@ jobs:
     permissions: { contents: read, security-events: write }
     steps:
       - uses: actions/checkout@v4
-      - uses: ethoic-inc/php-vuln-check@v0.1.2
+      - uses: ethoic-inc/php-vuln-check@v0.1.3
         with:
           fail-on: vulnerable          # or "review" to also fail on floating tags
           sarif-file: php-vuln.sarif
@@ -149,7 +149,7 @@ Findings show up in your repository's Security tab with the Dockerfile line. To 
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/ethoic-inc/php-vuln-check
-    rev: v0.1.2
+    rev: v0.1.3
     hooks:
       - id: php-vuln-check-images
 ```
@@ -164,6 +164,7 @@ Other CI systems: run `php-vuln-check images . --fail-on vulnerable`. Exit codes
 - SARIF output includes findings that have a file location (the `images` command), because GitHub code scanning needs one.
 - Config findings (`session.upload_progress.enabled`, `memory_limit`, `fatal_error_backtraces`) come from `php -i` for that binary. For PHP-FPM, `scan` also reads `php_value` / `php_admin_value` overrides from the pools in the packaging's usual `php-fpm.conf` and its includes, shown as `pool www: memory_limit=-1`. A config passed with `-y`/`--fpm-config` and `.user.ini` files are not read. They are hints, not proof, and the partial mitigations they relate to do not replace patching.
 - `scan` runs `php -n -v` and `php -i` only on binaries that are owned by root (or you) and that neither they nor their parent folders are writable by group or others. Anything else, such as a binary under a tenant's home directory, is read statically and never run. `--no-exec` runs nothing; `--exec` runs everything it finds. Programs are run with no terminal input, a timeout and capped output.
+- The advisory data is typed in from PHP's and the vendors' notices. Every report warns when it is more than 30 days old; update to the latest release then.
 - Linux and macOS hosts. Windows is not supported yet.
 - Written for Python 3.6+ so it runs on older enterprise hosts. CI runs the tests on 3.6, 3.7 and 3.8 to 3.13, and runs the tool against real PHP packages on Debian, Ubuntu, AlmaLinux, Rocky, Fedora, Amazon Linux, Alpine and the official PHP images. It is a new tool: read the results critically and report anything that looks wrong.
 

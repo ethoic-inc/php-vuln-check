@@ -15,11 +15,12 @@
 - Workflows: `ci.yml`, `distros.yml` (18 real-distro legs, skipped for docs-only changes), `pages.yml`, `release.yml` (tag push publishes; run it by hand for a dry run), Dependabot grouped weekly.
 - The org profile page lives in the separate public repo `ethoic-inc/.github` (`profile/README.md`, wording taken from ethoic.com).
 
-## Branch claude/vendor-fixed-versions (2026-10-22, not merged or released)
+## v0.1.3 (2026-10-22): PR #22
 - `scan` uses `vendor_fixed` (fixed distro builds from vendor notices; Ubuntu USN-8948-1 so far) when the dpkg changelog is missing, e.g. in Docker's ubuntu images. Same build line only, compared with `dpkg --compare-versions`. Add new USN builds there as Ubuntu ships them (20.04 / PHP 7.4 is not in USN-8948-1).
 - `scan` reads PHP-FPM pool `php_value` / `php_admin_value` overrides from the conventional `php-fpm.conf` and includes; reports `fatal_error_backtraces`. Mitigations reordered to PHP's advisory order.
-- New CI leg `ubuntu-24.04 without package docs` (must be PATCHED and show a pool override). Not run locally: no Docker on the Mac mini.
-- Release (v0.1.3) is Jake's call after the PR merges.
+- Reports warn when `DATA_CHECKED` is more than 30 days old. **Bump `DATA_CHECKED` whenever advisory data is re-checked**, even if nothing changed.
+- CI leg `ubuntu-24.04 without package docs` passes on real Ubuntu (PATCHED via the USN table, pool override read).
+- The community profile page shows every item checked except content reports (a repo setting, Settings > Moderation options). The API's `health_percentage` stays at 87 because it only detects the legacy single-file issue template; the page is the one that counts.
 
 ## Next
 1. Watch Issues and Discussions; wrong-detection reports (label `detection`) are the best signal.

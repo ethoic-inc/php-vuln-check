@@ -298,6 +298,21 @@ class FpmPoolOverrides(unittest.TestCase):
             self.assertEqual(pvc.fpm_pool_overrides(os.path.join(root, "sbin", "php-fpm")), {})
 
 
+class StaleData(unittest.TestCase):
+    def test_warns_only_after_the_threshold(self):
+        checked = pvc.datetime.datetime.strptime(pvc.DATA_CHECKED, "%Y-%m-%d").date()
+        day = pvc.datetime.timedelta(days=1)
+        self.assertIsNone(pvc.stale_data_note(checked))
+        self.assertIsNone(pvc.stale_data_note(checked + pvc.STALE_AFTER_DAYS * day))
+        note = pvc.stale_data_note(checked + (pvc.STALE_AFTER_DAYS + 1) * day)
+        self.assertIn("%d days ago" % (pvc.STALE_AFTER_DAYS + 1), note)
+        self.assertIn("/releases/latest", note)
+
+    def test_report_carries_the_warning(self):
+        with mock.patch.object(pvc, "stale_data_note", lambda: "old data"):
+            self.assertEqual(pvc.build_report([], ["x"], "scan")["notes"], ["x", "old data"])
+
+
 class Mitigations(unittest.TestCase):
     def test_primary_config_mitigation_comes_before_the_multipart_block(self):
         steps = ADV["mitigations"]

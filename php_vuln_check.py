@@ -30,7 +30,7 @@ import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 REPO_URL = "https://github.com/ethoic-inc/php-vuln-check"
 
 VULNERABLE, REVIEW, PATCHED, ERROR, NONE = "VULNERABLE", "REVIEW", "PATCHED", "ERROR", "NONE"
@@ -81,6 +81,10 @@ ADVISORIES = [
     }
 ]
 ADVISORIES_BY_ID = {a["id"]: a for a in ADVISORIES}
+# The day ADVISORIES (fixed versions and vendor builds) was last checked against the vendors.
+# Bump it with every data update; reports warn once it is older than STALE_AFTER_DAYS.
+DATA_CHECKED = "2026-10-22"
+STALE_AFTER_DAYS = 30
 
 CONFIG_KEYS = ("session.upload_progress.enabled", "memory_limit", "fatal_error_backtraces")
 
@@ -1218,8 +1222,20 @@ def summarize(findings):
     return counts
 
 
+def stale_data_note(today=None):
+    """A warning when the advisory data is old enough that newer fixes may be missing, else None."""
+    checked = datetime.datetime.strptime(DATA_CHECKED, "%Y-%m-%d").date()
+    age = ((today or datetime.date.today()) - checked).days
+    if age <= STALE_AFTER_DAYS:
+        return None
+    return ("This tool's advisory data was last checked on %s (%d days ago), so newer PHP fixes or vendor "
+            "builds may be missing. Get the latest release: %s/releases/latest" % (DATA_CHECKED, age, REPO_URL))
+
+
 def build_report(findings, notes, mode):
     counts = summarize(findings)
+    stale = stale_data_note()
+    notes = notes + [stale] if stale else notes
     return {
         "tool": "php-vuln-check", "version": __version__, "mode": mode,
         "generated": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
