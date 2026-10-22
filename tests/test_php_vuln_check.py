@@ -807,5 +807,48 @@ class Output(unittest.TestCase):
         self.assertEqual(code, 3)
 
 
+class Sourcing(unittest.TestCase):
+    def test_primary_php_advisories_come_first(self):
+        urls = [r["url"] for r in ADV["references"][:2]]
+        self.assertTrue(all(u.startswith("https://github.com/php/php-src/security/advisories/GHSA-") for u in urls), urls)
+
+
+class RpmOwner(unittest.TestCase):
+    def owner(self, code, out):
+        with mock.patch.dict(pvc.BIN, {"rpm": "/bin/sh"}), mock.patch.object(pvc, "run", lambda cmd, **kw: (code, out, "")):
+            return pvc._rpm_owner("/usr/bin/php")
+
+    def test_owned_file(self):
+        self.assertEqual(self.owner(0, "php-cli\t8.2.30-1.el9\n"),
+                         {"manager": "rpm", "name": "php-cli", "version": "8.2.30-1.el9", "source": ""})
+
+    def test_unowned_or_failed_lookup(self):
+        self.assertIsNone(self.owner(1, "file /usr/bin/php is not owned by any package\n"))
+        self.assertIsNone(self.owner(0, "garbage without a tab\n"))
+        self.assertIsNone(self.owner(None, ""))
+
+
+class Invariants(unittest.TestCase):
+    """PATCHED must never appear without evidence, whatever the input looks like."""
+
+    PARTS = ["php", "8", "3", "36", "35", "5", "12", "2", "7", "4", "1", ".", "-", ":", "@sha256:ab", "fpm", "apache", "rc1", "RC",
+             "dev", "alpine", "${V}", "$V", "library/", "docker.io/", "evil/", "wordpress", "php8.3", "latest", "99999999", "0", "x", "/"]
+
+    def test_random_versions_and_image_refs(self):
+        import random
+        rnd = random.Random(7)
+        for _ in range(30000):
+            s = "".join(rnd.choice(self.PARTS) for _ in range(rnd.randint(1, 9)))
+            v = pvc.parse_version(s)
+            if v and pvc.evaluate(ADV, v)[0] == pvc.PATCHED:
+                fixed = ADV["fixed"].get("%d.%d" % v[:2])
+                self.assertTrue(fixed and v[:3] >= tuple(int(x) for x in fixed.split(".")), s)
+                self.assertFalse(pvc.PRERELEASE_RE.search(v[3]), s)
+            derived = rnd.random() < 0.3
+            verdict = pvc.evaluate_image(ADV, s, derived)
+            if verdict and verdict[0] == pvc.PATCHED:
+                self.assertFalse(derived or "@" in s or "$" in s, s)
+
+
 if __name__ == "__main__":
     unittest.main()

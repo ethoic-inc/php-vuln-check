@@ -1,8 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.1.2 (2026-10-22)
 
-Copyright holder is now Ethoic Inc (LICENSE, package metadata, site metadata). No change in behavior.
+- Fixed versions are now sourced from PHP's own advisories (GHSA-w8hw-w9fx-j79w, GHSA-6wmf-4rv5-p3rp), which are the first references in the tool, the SARIF output and the docs. The docs say plainly that those advisories cover 8.2 to 8.5 and that the PHP 5.4 start of the affected range comes from Sansec.
+- Copyright holder is Ethoic Inc (LICENSE, package metadata, site metadata).
+- Code of conduct, an rpm ownership test and an invariant test that PATCHED never appears without evidence.
+- No change in detection behavior.
 
 ## 0.1.1 (2026-10-22)
 

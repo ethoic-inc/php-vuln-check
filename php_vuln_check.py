@@ -30,7 +30,7 @@ import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 REPO_URL = "https://github.com/ethoic-inc/php-vuln-check"
 
 VULNERABLE, REVIEW, PATCHED, ERROR, NONE = "VULNERABLE", "REVIEW", "PATCHED", "ERROR", "NONE"
@@ -45,6 +45,7 @@ ADVISORIES = [
         "severity": "critical",
         "cvss": "9.2 (CVSS v4.0)",
         "published": "2026-10-21",
+        # PHP's own advisories list only 8.2 to 8.5; Sansec reports exposure back to 5.4 (older branches get no fix).
         "min_affected": "5.4.0",
         "fixed": {"8.2": "8.2.35", "8.3": "8.3.36", "8.4": "8.4.27", "8.5": "8.5.12"},
         "summary": (
@@ -58,6 +59,8 @@ ADVISORIES = [
             "Temporary and partial: set session.upload_progress.enabled=0 and memory_limit=-1 (watch memory use).",
         ],
         "references": [
+            {"title": "PHP advisory for CVE-2026-109618", "url": "https://github.com/php/php-src/security/advisories/GHSA-w8hw-w9fx-j79w"},
+            {"title": "PHP advisory for CVE-2026-109619", "url": "https://github.com/php/php-src/security/advisories/GHSA-6wmf-4rv5-p3rp"},
             {"title": "Sansec research", "url": "https://sansec.io/research/php2shell"},
             {"title": "Help Net Security", "url": "https://www.helpnetsecurity.com/2026/10/21/php2shell-php-vulnerabilities-patched-cve-2026-109618-cve-2026-109619/"},
             {"title": "watchTowr FAQ", "url": "https://watchtowr.com/intelligence/php-cve-2026-109618-faq/"},
