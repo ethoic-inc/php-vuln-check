@@ -15,7 +15,14 @@ php-vuln-check                 # audit PHP on this server
 php-vuln-check images .        # audit Dockerfiles, compose files and Kubernetes manifests
 ```
 
-No install needed either: it is a single file you can copy to a server and run with `python3 php_vuln_check.py`.
+No install needed either. It is a single file with no dependencies, so you can drop it on a server:
+
+```bash
+curl -fsSLO https://github.com/jake-bowser/php-vuln-check/releases/latest/download/php_vuln_check.py
+python3 php_vuln_check.py
+```
+
+Each release also publishes `SHA256SUMS` so you can verify the file first.
 
 ```text
 VULNERABLE  php:7.4-apache
