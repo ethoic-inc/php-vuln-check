@@ -202,7 +202,7 @@ Questions, press or anything else: **hello@ethoic.com**.
 
 ## About Ethoic
 
-[Ethoic Inc](https://ethoic.com) builds human-centered AI tools. We think software you depend on should be software you can check, so this tool runs on your own machine, has no telemetry and only talks to the hosts you point it at.
+[Ethoic Inc](https://ethoic.com) builds human-centered AI tools. This tool runs on your own machine, has no telemetry and only talks to the hosts you point it at.
 
 ## Disclaimer
 
