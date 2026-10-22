@@ -9,12 +9,18 @@
 - Not verified: Windows, SUSE and Arch, Helm values files, PHP in custom prefixes (use `--path`), a real `kubectl` cluster (the parser and command are tested with a fake `kubectl`).
 - Fixed versions (8.2.35, 8.3.36, 8.4.27, 8.5.12) come from Sansec, Help Net Security and watchTowr. The official `php:8.3` image and Alpine's `php83` also report 8.3.36. Worth checking against the PHP project's own advisory.
 
+## Repository settings (set up at launch)
+- Security: secret scanning with push protection, Dependabot alerts and security updates, CodeQL default setup (Python and Actions; the first Python analysis found 0 issues), private vulnerability reporting, and `main` cannot be force-pushed or deleted.
+- Community: Discussions with a welcome announcement, issue templates (Wrong detection, Feature request), `SUPPORT.md`, three starter issues.
+- Workflows: `ci.yml`, `distros.yml` (18 real-distro legs, skipped for docs-only changes), `pages.yml`, `release.yml` (tag push publishes; run it by hand for a dry run), Dependabot grouped weekly.
+- The org profile page lives in the separate public repo `ethoic-inc/.github` (`profile/README.md`, wording taken from ethoic.com).
+
 ## Next
 1. Watch Issues and Discussions; wrong-detection reports (label `detection`) are the best signal.
 2. Add the next PHP advisory as one dict in `ADVISORIES` (see CONTRIBUTING.md).
 3. Starter issues: Windows (#2), SUSE/Arch/Alpine changelogs (#3), next advisory (#4).
 4. Optional publishing: PyPI (register a trusted publisher for `release.yml`, then set repository variable `PYPI_PUBLISH=true`); GitHub Marketplace listing for the Action.
-5. Social preview image must be uploaded by hand: Settings > General > Social preview > `site/social-preview.png`.
+5. By hand only: upload `site/social-preview.png` (Settings > General > Social preview, GitHub has no API for it) and turn on the two-factor requirement for the `ethoic-inc` org.
 
 ## Decisions
 - Name is generic (`php-vuln-check`) so the repo outlives this CVE; PHP2Shell keywords live in the description, topics, README and site.
