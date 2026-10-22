@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+Copyright holder is now Ethoic Inc (LICENSE, package metadata, site metadata). No change in behavior.
+
 ## 0.1.1 (2026-10-22)
 
 Moved to the `ethoic-inc` GitHub organization. Project links, attribution ("An open-source project from Ethoic Inc") and the public contact address (hello@ethoic.com) updated; no change in behavior.

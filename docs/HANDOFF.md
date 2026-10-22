@@ -1,7 +1,7 @@
 # Handoff
 
 ## State (2026-10-22): launched, then moved to the ethoic-inc org
-- The repo was transferred from `jake-bowser` to the `ethoic-inc` GitHub organization the same day (before any posts or stars) and released as v0.1.1. Old repo and download URLs redirect; the old Pages URL does not. The `LICENSE` copyright line is unchanged on purpose; change it only when the owner says so.
+- The repo was transferred from `jake-bowser` to the `ethoic-inc` GitHub organization the same day (before any posts or stars) and released as v0.1.1. Old repo and download URLs redirect; the old Pages URL does not. Copyright holder is Ethoic Inc (see `LICENSE`).
 - v0.1.0 is public: https://github.com/ethoic-inc/php-vuln-check, release v0.1.0 (single-file download, wheel, sdist, SHA256SUMS), landing page on GitHub Pages (`site/`, deployed by `pages.yml`).
 - Code: `php_vuln_check.py` (scan, images, url, fleet, advisories), ~90 unit tests, a 18-leg real-distro CI matrix, a GitHub Action (`action.yml`, self-tested in CI), a pre-commit hook, README written for search.
 - **Real-distro results** (CI `Real distros` workflow): run against real PHP packages on Debian 12 and 13, Ubuntu 20.04, 22.04 and 24.04, AlmaLinux 8 and 9, Rocky 9, Fedora, Amazon Linux, Alpine and the official `php` images. Exec, default and `--no-exec` modes agree on versions; package ownership, mod_php detection and the vendor-changelog backport check work (AlmaLinux 8's PHP 7.2.24 is correctly PATCHED through a vendor backport naming both CVEs). Unit tests pass on Python 3.6, 3.7 and 3.8 to 3.13. Debian 11 is a best-effort leg (end-of-life, packages moved to the archive).
