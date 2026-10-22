@@ -18,3 +18,4 @@ A zero-dependency Python CLI that finds PHP installs exposed to known PHP vulner
 - Start of session: `git pull`, read this file and `docs/HANDOFF.md`. End of session: update `docs/HANDOFF.md`, commit, push.
 - Branches: `claude/<topic>` or `codex/<topic>`, merged by PR. Do not push to `main` directly.
 - **Contact:** the public contact address is hello@ethoic.com (Ethoic Inc's choice). Do not put personal email addresses in docs, metadata or the site.
+- **Ownership:** Ethoic Inc is the copyright holder and publisher (see `LICENSE`); keep attribution as "An open-source project from Ethoic Inc" and never write "Ethoic Inc." with a period. Do not put IP-paperwork details in this repo.
