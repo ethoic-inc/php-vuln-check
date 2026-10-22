@@ -1,0 +1,5 @@
+# Package metadata lives in setup.cfg so that it installs with setuptools 59 on Python 3.6 hosts
+# (PEP 621 [project] tables need setuptools 61, which needs Python 3.7+).
+[build-system]
+requires = ["setuptools>=42"]
+build-backend = "setuptools.build_meta"

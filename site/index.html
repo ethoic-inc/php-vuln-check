@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PHP2Shell Checker: Is Your PHP Vulnerable? | php-vuln-check</title>
+<meta name="description" content="Free open-source PHP2Shell checker for CVE-2026-109618 and CVE-2026-109619. Audit servers, Docker images and CI for vulnerable PHP. No exploit traffic.">
+<link rel="canonical" href="https://jake-bowser.github.io/php-vuln-check/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="PHP2Shell checker: is your PHP patched?">
+<meta property="og:description" content="Audit servers, Docker images and CI for CVE-2026-109618 and CVE-2026-109619. Backport-aware, zero dependencies, no exploit traffic.">
+<meta property="og:url" content="https://jake-bowser.github.io/php-vuln-check/">
+<meta property="og:image" content="https://jake-bowser.github.io/php-vuln-check/social-preview.png">
+<meta property="og:image:alt" content="php-vuln-check terminal output marking php:8.3.35-fpm-alpine VULNERABLE and php:8.4.27-apache PATCHED">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "php-vuln-check",
+  "alternateName": "PHP2Shell checker",
+  "description": "Open-source PHP vulnerability checker for PHP2Shell (CVE-2026-109618 and CVE-2026-109619). Audits servers, Docker images and CI pipelines, and understands distro backports.",
+  "applicationCategory": "SecurityApplication",
+  "operatingSystem": "Linux, macOS",
+  "url": "https://jake-bowser.github.io/php-vuln-check/",
+  "downloadUrl": "https://github.com/jake-bowser/php-vuln-check",
+  "codeRepository": "https://github.com/jake-bowser/php-vuln-check",
+  "license": "https://opensource.org/licenses/MIT",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "author": { "@type": "Person", "name": "Jake Bowser" }
+}
+</script>
+<style>
+:root { --bg:#ffffff; --fg:#16181d; --muted:#5b6270; --card:#f4f6fa; --line:#dde2ec; --accent:#d6293c; --ok:#15803d; --code:#0b1020; --codefg:#e6e9f5; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#0d1017; --fg:#e8ebf3; --muted:#9aa3b8; --card:#151a25; --line:#262d3f; --accent:#ff5a6b; --ok:#4ade80; --code:#070a12; --codefg:#e6e9f5; }
+}
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--fg); font:17px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+main { max-width: 780px; margin: 0 auto; padding: 48px 20px 64px; }
+h1 { font-size: clamp(2rem, 6vw, 3rem); line-height: 1.1; margin: 0 0 16px; letter-spacing: -0.02em; }
+h2 { font-size: 1.5rem; margin: 48px 0 12px; letter-spacing: -0.01em; }
+p { margin: 0 0 16px; }
+.eyebrow { color: var(--accent); font-weight: 700; letter-spacing: .08em; font-size: .85rem; text-transform: uppercase; margin-bottom: 12px; }
+.lead { font-size: 1.2rem; color: var(--muted); }
+pre { background: var(--code); color: var(--codefg); padding: 16px 18px; border-radius: 12px; overflow-x: auto; font: 15px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; margin: 16px 0; }
+code { font: .92em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--card); padding: 1px 6px; border-radius: 6px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+.bad { color: #ff5a6b; font-weight: 700; } .good { color: #4ade80; font-weight: 700; } .warn { color: #fbbf24; font-weight: 700; }
+.cta { display: flex; flex-wrap: wrap; gap: 12px; margin: 24px 0 8px; }
+.btn { display: inline-block; padding: 11px 18px; border-radius: 10px; text-decoration: none; font-weight: 600; border: 1px solid var(--line); color: var(--fg); background: var(--card); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: .97rem; }
+th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; }
+.grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); margin: 16px 0; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+.card h3 { margin: 0 0 6px; font-size: 1.02rem; }
+.card p { margin: 0; color: var(--muted); font-size: .95rem; }
+details { border-bottom: 1px solid var(--line); padding: 12px 0; }
+summary { cursor: pointer; font-weight: 600; }
+details p { margin: 10px 0 0; color: var(--muted); }
+a { color: var(--accent); }
+footer { margin-top: 56px; color: var(--muted); font-size: .9rem; }
+</style>
+</head>
+<body>
+<main>
+  <div class="eyebrow">CVE-2026-109618 · CVE-2026-109619</div>
+  <h1>Is your PHP patched against PHP2Shell?</h1>
+  <p class="lead">php-vuln-check is a free, open-source PHP2Shell checker. It audits your servers, Docker images and CI pipelines, understands distro backports, and never sends exploit traffic.</p>
+
+  <div class="cta">
+    <a class="btn primary" href="https://github.com/jake-bowser/php-vuln-check">View on GitHub</a>
+    <a class="btn" href="https://github.com/jake-bowser/php-vuln-check#readme">Read the docs</a>
+  </div>
+
+  <h2>Check your PHP in 10 seconds</h2>
+<pre tabindex="0"><code>pipx install git+https://github.com/jake-bowser/php-vuln-check
+php-vuln-check            # audit PHP on this server
+php-vuln-check images .   # audit Dockerfiles, compose files, Kubernetes manifests</code></pre>
+<pre tabindex="0"><code><span class="bad">VULNERABLE</span>  php:8.3.35-fpm-alpine
+            8.3.35 is below the fixed release 8.3.36
+<span class="warn">REVIEW</span>      php:8.3-cli
+            floating tag: pin it to 8.3.36 or later and rebuild with --pull
+<span class="good">PATCHED</span>     php:8.4.27-apache
+            8.4.27 is the fixed release</code></pre>
+
+  <h2>Which PHP versions fix PHP2Shell?</h2>
+  <p>PHP2Shell is two critical remote code execution bugs in the PHP engine (CVSS 9.2) that need no login. They affect unpatched PHP back to 5.4 serving web requests, mainly Apache <code>mod_php</code> and PHP-FPM.</p>
+  <table>
+    <thead><tr><th>PHP branch</th><th>Fixed in</th></tr></thead>
+    <tbody>
+      <tr><td>8.5</td><td><strong>8.5.12</strong></td></tr>
+      <tr><td>8.4</td><td><strong>8.4.27</strong></td></tr>
+      <tr><td>8.3</td><td><strong>8.3.36</strong></td></tr>
+      <tr><td>8.2</td><td><strong>8.2.35</strong></td></tr>
+      <tr><td>8.1 and older</td><td>no upstream release: use a vendor backport or upgrade</td></tr>
+    </tbody>
+  </table>
+
+  <h2>What it checks</h2>
+  <div class="grid">
+    <div class="card"><h3>Servers</h3><p>Every PHP CLI, FPM, CGI and Apache mod_php install, its version and its package changelog.</p></div>
+    <div class="card"><h3>Docker and Kubernetes</h3><p>FROM lines, compose files and manifests, with the file and line number.</p></div>
+    <div class="card"><h3>Whole fleets</h3><p>Run it on every host over SSH. Nothing is installed on them.</p></div>
+    <div class="card"><h3>CI pipelines</h3><p>A GitHub Action and SARIF output put findings in your Security tab.</p></div>
+  </div>
+
+  <h2>Frequently asked questions</h2>
+  <details><summary>How do I check if my server is vulnerable to PHP2Shell?</summary><p>Run <code>php-vuln-check</code> on the server. VULNERABLE means the PHP there is below the fix and has no vendor backport. PATCHED means the version is fixed or the vendor changelog names both CVEs.</p></details>
+  <details><summary>Does Debian, Ubuntu or RHEL ship a fixed PHP?</summary><p>Often as a backport on an older version number, so PHP 8.2.30 on a distro can be safe. The checker reads the package changelog for both CVE IDs before calling a host patched.</p></details>
+  <details><summary>Is PHP 7.4 or 8.1 vulnerable to CVE-2026-109618?</summary><p>Yes unless your vendor shipped a backport. Those branches are end-of-life and have no upstream fix.</p></details>
+  <details><summary>Will the checker crash my server?</summary><p>No. It sends no exploit traffic. On a server it reads files and runs <code>php -n -v</code> and <code>php -i</code>; <code>--no-exec</code> skips even that.</p></details>
+  <details><summary>How is this different from other PHP2Shell scanners?</summary><p>Active scanners probe a host by deliberately triggering PHP memory exhaustion. php-vuln-check reads versions, changelogs and config instead, so it is safe on production and covers images, pipelines and whole fleets. Use both.</p></details>
+
+  <footer>
+    <p>An independent open-source project under the MIT license, not affiliated with the PHP Group. Sources: <a href="https://sansec.io/research/php2shell">Sansec</a>, <a href="https://www.helpnetsecurity.com/2026/10/21/php2shell-php-vulnerabilities-patched-cve-2026-109618-cve-2026-109619/">Help Net Security</a>, <a href="https://watchtowr.com/intelligence/php-cve-2026-109618-faq/">watchTowr</a>. A PATCHED result is evidence about versions and changelogs, not a guarantee.</p>
+  </footer>
+</main>
+</body>
+</html>

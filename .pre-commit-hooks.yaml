@@ -1,0 +1,7 @@
+- id: php-vuln-check-images
+  name: php-vuln-check (PHP2Shell in Dockerfiles, compose files and manifests)
+  description: Fail when a Dockerfile, compose file or Kubernetes manifest uses a PHP version affected by PHP2Shell (CVE-2026-109618 / CVE-2026-109619).
+  entry: php-vuln-check images --fail-on vulnerable
+  language: python
+  files: (^|/)(Dockerfile[^/]*|Containerfile[^/]*|[^/]*\.(Dockerfile|Containerfile)|[^/]*\.ya?ml)$
+  pass_filenames: true

@@ -1,0 +1,10 @@
+name: Feature or advisory request
+description: Support a new package manager, platform, output format or PHP advisory.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What would you like it to do?
+      description: For a new advisory, link the PHP project's own advisory with the fixed versions.
+    validations: { required: true }

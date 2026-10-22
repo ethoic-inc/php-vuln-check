@@ -1,0 +1,7 @@
+services:
+  web:
+    image: php:8.4.27-apache
+  worker:
+    image: php:8.3-cli
+  db:
+    image: postgres:16

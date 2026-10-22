@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    name: Unit tests (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.8", "3.10", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m unittest discover -s tests -v
+
+  real-php:
+    # Runs the tool against PHP installed by apt, so version parsing, package
+    # ownership and changelog lookups are exercised on a real distro.
+    name: Real PHP on Ubuntu
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - run: sudo apt-get update && sudo apt-get install -y php-cli php-fpm libapache2-mod-php
+      - name: Scan (exec mode)
+        run: |
+          python3 php_vuln_check.py scan --fail-on never
+          python3 php_vuln_check.py scan --fail-on never --format json > exec.json
+      - name: Scan (no-exec mode)
+        run: python3 php_vuln_check.py scan --no-exec --fail-on never --format json > static.json
+      - name: Check both modes found PHP and agree on versions
+        run: |
+          python3 - <<'PY'
+          import json
+          a = json.load(open("exec.json"))["findings"]
+          b = json.load(open("static.json"))["findings"]
+          kinds = {f["kind"] for f in a}
+          print("exec :", [(f["target"], f["version"], f["status"]) for f in a])
+          print("static:", [(f["target"], f["version"], f["status"]) for f in b])
+          assert "binary" in kinds, "no PHP binary found"
+          assert "mod_php" in kinds, "no mod_php module found"
+          assert all(f["version"] for f in a + b), "a target has no version"
+          assert {f["target"]: f["version"] for f in a} == {f["target"]: f["version"] for f in b}
+          assert any(f["package"] for f in a), "no package ownership detected"
+          PY
+      - name: Images demo
+        run: python3 php_vuln_check.py images examples/demo --fail-on never
+
+  integration-sarif:
+    name: SARIF is valid JSON with locations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - run: |
+          python3 php_vuln_check.py images examples/demo --format sarif --fail-on never -o out.sarif
+          python3 -c "import json; d=json.load(open('out.sarif')); r=d['runs'][0]['results']; assert r and all(x['locations'] for x in r); print(len(r), 'results')"
+
+  action:
+    name: GitHub Action self-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: A vulnerable image fails the gate and writes SARIF
+        id: gate
+        uses: ./
+        with:
+          path: examples/demo/legacy
+          fail-on: vulnerable
+          sarif-file: gate.sarif
+        continue-on-error: true
+      - name: Check the gate failed and the SARIF has the finding
+        env:
+          OUTCOME: ${{ steps.gate.outcome }}
+        run: |
+          test "$OUTCOME" = "failure"
+          python3 -c "import json; d=json.load(open('gate.sarif')); r=d['runs'][0]['results']; assert r and r[0]['level']=='error', r; print('SARIF ok', len(r))"
+      - name: A fixed image passes the gate
+        uses: ./
+        with:
+          path: tests/fixtures/patched
+          fail-on: review
+      - name: A mistyped path fails instead of passing silently
+        id: typo
+        uses: ./
+        with:
+          path: no/such/folder
+        continue-on-error: true
+      - name: Check the typo failed
+        env:
+          OUTCOME: ${{ steps.typo.outcome }}
+        run: test "$OUTCOME" = "failure"
