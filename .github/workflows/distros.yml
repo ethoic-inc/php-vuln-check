@@ -35,6 +35,9 @@ jobs:
           - { name: "ubuntu-24.04 (PHP 8.3)", image: "ubuntu:24.04", expect_pkg: 1, expect_modphp: 1, install: "rm -f /etc/dpkg/dpkg.cfg.d/docker* /etc/dpkg/dpkg.cfg.d/excludes; apt-get update -qq && apt-get install -y -qq python3 php-cli php-fpm libapache2-mod-php" }
           # Same distro with the Docker image's default of no package docs: no changelog to read.
           - { name: "debian-12 without package docs", image: "debian:12", expect_pkg: 1, install: "apt-get update -qq && apt-get install -y -qq python3 php-cli php-fpm" }
+          # Ubuntu's PHP fix keeps the old version number, so without docs only the USN's fixed-build list proves it.
+          # The pool line checks that FPM pool overrides are read.
+          - { name: "ubuntu-24.04 without package docs", image: "ubuntu:24.04", expect_pkg: 1, expect_patched: 1, expect_pool: 1, install: "apt-get update -qq && apt-get install -y -qq python3 php-cli php-fpm && echo 'php_admin_value[memory_limit] = -1' >> /etc/php/8.3/fpm/pool.d/www.conf" }
           # RHEL family. AlmaLinux 8 ships Python 3.6, which is the oldest we claim to support.
           - { name: "almalinux-8 (Python 3.6 and PHP 7.2)", image: "almalinux:8", expect_pkg: 1, install: "dnf install -y -q python3 php-cli php-fpm" }
           - { name: "almalinux-9", image: "almalinux:9", expect_pkg: 1, install: "dnf install -y -q python3 php-cli php-fpm" }
@@ -59,8 +62,10 @@ jobs:
           EXPECT_PKG: ${{ matrix.expect_pkg }}
           EXPECT_MODPHP: ${{ matrix.expect_modphp }}
           SKIP_PHP: ${{ matrix.skip_php }}
+          EXPECT_PATCHED: ${{ matrix.expect_patched }}
+          EXPECT_POOL: ${{ matrix.expect_pool }}
         run: |
           docker run --rm -v "$PWD":/w -w /w \
             -e DEBIAN_FRONTEND=noninteractive -e TZ=UTC \
-            -e EXPECT_PKG -e EXPECT_MODPHP -e SKIP_PHP \
+            -e EXPECT_PKG -e EXPECT_MODPHP -e SKIP_PHP -e EXPECT_PATCHED -e EXPECT_POOL \
             "$IMAGE" sh -c "$INSTALL && python3 tests/distro_smoke.py"

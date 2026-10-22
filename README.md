@@ -72,7 +72,7 @@ Sources: PHP's advisories above are the primary record. Analysis and mitigations
 
 | Command | Looks at | Confidence |
 |---|---|---|
-| `php-vuln-check scan` | every `php`, `php-fpm`, `php-cgi`, `lsphp` and Apache `libphp*.so` on this machine: version, SAPI, owning package, vendor changelog, `session.upload_progress` and `memory_limit` | high |
+| `php-vuln-check scan` | every `php`, `php-fpm`, `php-cgi`, `lsphp` and Apache `libphp*.so` on this machine: version, SAPI, owning package, vendor changelog or fixed build, `session.upload_progress`, `memory_limit` and `fatal_error_backtraces`, including PHP-FPM pool overrides | high |
 | `php-vuln-check images PATH` | `FROM` lines in Dockerfiles (with `ARG` defaults), `image:` in compose files and Kubernetes manifests | high for pinned tags |
 | `php-vuln-check images --docker` | images of running containers | high for pinned tags |
 | `php-vuln-check images --kubectl` | images of every pod in the current cluster (`--kubectl-args "--context prod"`) | high for pinned tags |
@@ -81,7 +81,7 @@ Sources: PHP's advisories above are the primary record. Analysis and mitigations
 
 Every result is one of:
 
-- **PATCHED**: version at or above the fix, or the vendor changelog names both CVEs. It describes the files on disk; `scan` downgrades it to REVIEW when running processes still use a replaced PHP file, and you should restart PHP-FPM or Apache after any update.
+- **PATCHED**: version at or above the fix, the vendor changelog names both CVEs, or the package is at or above a fixed build listed in the vendor's security notice. It describes the files on disk; `scan` downgrades it to REVIEW when running processes still use a replaced PHP file, and you should restart PHP-FPM or Apache after any update.
 - **VULNERABLE**: below the fix with no backport evidence, or an end-of-life branch.
 - **REVIEW**: it cannot tell (floating image tag, digest-pinned image, hidden version, pre-release, a package whose changelog is not installed). Not a clean bill of health.
 - **NONE**: `fleet` found no PHP on that host in the standard locations. This is not PATCHED: PHP in a custom prefix, container or vhost folder would not appear.
@@ -103,7 +103,9 @@ Active scanners such as [Assetnote's php2shell-scanner](https://github.com/asset
 
 ## How backport detection works
 
-Debian, Ubuntu and RHEL patch PHP without bumping it to 8.2.35, so `PHP 8.2.30` on a distro can be safe. For a binary owned by a package, `scan` reads the vendor changelog (`/usr/share/doc/<pkg>/changelog.Debian.gz`, or `rpm -q --changelog`) and treats the host as patched only if **both** CVE IDs are named. You can check by hand:
+Debian, Ubuntu and RHEL patch PHP without bumping it to 8.2.35, so `PHP 8.2.30` on a distro can be safe. For a binary owned by a package, `scan` reads the vendor changelog (`/usr/share/doc/<pkg>/changelog.Debian.gz`, or `rpm -q --changelog`) and treats the host as patched only if **both** CVE IDs are named.
+
+Docker's `ubuntu` and `debian` images strip `/usr/share/doc`, so there is often no changelog to read. Then `scan` compares the package version with the fixed builds listed in the vendor's notice (for Ubuntu, [USN-8948-1](https://ubuntu.com/security/notices/USN-8948-1)), using `dpkg --compare-versions`. A fixed build only counts for the same build line, so a Sury `8.3.6-1+ubuntu24.04.1` is never judged against Ubuntu's `8.3.6-0ubuntu0.24.04.13`. Debian's fixes are new upstream releases (8.2.35, 8.4.27), which the version check already covers. You can check by hand:
 
 ```bash
 zgrep CVE-2026-109618 /usr/share/doc/php8.2-common/changelog.Debian.gz    # Debian, Ubuntu
@@ -132,7 +134,7 @@ jobs:
     permissions: { contents: read, security-events: write }
     steps:
       - uses: actions/checkout@v4
-      - uses: ethoic-inc/php-vuln-check@v0.1.2
+      - uses: ethoic-inc/php-vuln-check@v0.1.3
         with:
           fail-on: vulnerable          # or "review" to also fail on floating tags
           sarif-file: php-vuln.sarif
@@ -147,7 +149,7 @@ Findings show up in your repository's Security tab with the Dockerfile line. To 
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/ethoic-inc/php-vuln-check
-    rev: v0.1.2
+    rev: v0.1.3
     hooks:
       - id: php-vuln-check-images
 ```
@@ -160,8 +162,9 @@ Other CI systems: run `php-vuln-check images . --fail-on vulnerable`. Exit codes
 - `images` reads tags in your files. It does not open the image, so a `FROM` line you rebuild later can drift. Pin full versions and rebuild with `--pull`. A version that comes from an `ARG` default or a `${VAR:-default}` can be overridden by a build argument or `.env` file, so it can be VULNERABLE or REVIEW but never PATCHED. Digest-pinned references are REVIEW. Third-party images that merely name themselves `php` are never PATCHED from their tag.
 - Directory scans read Dockerfiles (any `Dockerfile*`, `*.Dockerfile`, `Containerfile*`), `COPY --from=` images, and `*.yml`/`*.yaml` files with `image:` entries. JSON manifests are read when you pass them by name. Helm values files that split `repository` and `tag` are not read yet.
 - SARIF output includes findings that have a file location (the `images` command), because GitHub code scanning needs one.
-- Config findings (`session.upload_progress.enabled`, `memory_limit`) come from `php -i` for that binary. PHP-FPM pool overrides and `.user.ini` files are not visible. They are hints, not proof, and the partial mitigations they relate to do not replace patching.
+- Config findings (`session.upload_progress.enabled`, `memory_limit`, `fatal_error_backtraces`) come from `php -i` for that binary. For PHP-FPM, `scan` also reads `php_value` / `php_admin_value` overrides from the pools in the packaging's usual `php-fpm.conf` and its includes, shown as `pool www: memory_limit=-1`. A config passed with `-y`/`--fpm-config` and `.user.ini` files are not read. They are hints, not proof, and the partial mitigations they relate to do not replace patching.
 - `scan` runs `php -n -v` and `php -i` only on binaries that are owned by root (or you) and that neither they nor their parent folders are writable by group or others. Anything else, such as a binary under a tenant's home directory, is read statically and never run. `--no-exec` runs nothing; `--exec` runs everything it finds. Programs are run with no terminal input, a timeout and capped output.
+- The advisory data is typed in from PHP's and the vendors' notices. Every report warns when it is more than 30 days old; update to the latest release then.
 - Linux and macOS hosts. Windows is not supported yet.
 - Written for Python 3.6+ so it runs on older enterprise hosts. CI runs the tests on 3.6, 3.7 and 3.8 to 3.13, and runs the tool against real PHP packages on Debian, Ubuntu, AlmaLinux, Rocky, Fedora, Amazon Linux, Alpine and the official PHP images. It is a new tool: read the results critically and report anything that looks wrong.
 
@@ -189,7 +192,7 @@ Often as a backport on an older version number. `scan` checks the package change
 It sends no exploit traffic. `scan` reads files and runs `php -n -v` and `php -i` on trusted binaries only. `--no-exec` skips even that.
 
 **What do I do if it says VULNERABLE?**
-Update PHP and restart PHP-FPM or Apache. Until then, blocking `multipart/form-data` at the web server is a partial, temporary mitigation that breaks uploads. See the [Sansec write-up](https://sansec.io/research/php2shell) for exact snippets.
+Update PHP and restart PHP-FPM or Apache. Until then, the partial, temporary mitigations in PHP's advisory are, in its order: enforce `memory_limit=-1` in admin config and cap request body size at the web server; set `session.upload_progress.enabled=0` (and `fatal_error_backtraces=0` on PHP 8.5) and restart every worker; and, only if the application takes no uploads, block `multipart/form-data` at the web server. See the [Sansec write-up](https://sansec.io/research/php2shell) for exact snippets.
 
 **Does it find other PHP CVEs?**
 Not yet. Advisories are one entry in the `ADVISORIES` list at the top of `php_vuln_check.py`, so adding the next one is a small pull request. See [CONTRIBUTING.md](CONTRIBUTING.md).

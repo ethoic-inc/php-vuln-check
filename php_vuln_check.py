@@ -30,7 +30,7 @@ import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 REPO_URL = "https://github.com/ethoic-inc/php-vuln-check"
 
 VULNERABLE, REVIEW, PATCHED, ERROR, NONE = "VULNERABLE", "REVIEW", "PATCHED", "ERROR", "NONE"
@@ -51,16 +51,29 @@ ADVISORIES = [
         "summary": (
             "Unauthenticated remote code execution in the PHP engine (Apache mod_php "
             "and PHP-FPM), triggered by a fatal error such as running out of memory "
-            "during a multipart/form-data request."
+            "while PHP parses a request, for example a multipart/form-data upload."
         ),
+        # Ordered as PHP's advisory ranks them: memory_limit=-1 is its primary config mitigation.
         "mitigations": [
             "Update PHP to a fixed release, or to a vendor build whose changelog lists both CVEs, then restart PHP-FPM / Apache.",
-            "Temporary and partial: block multipart/form-data requests at the web server (this breaks file uploads).",
-            "Temporary and partial: set session.upload_progress.enabled=0 and memory_limit=-1 (watch memory use).",
+            "Temporary and partial: enforce memory_limit=-1 in admin config (php.ini or php_admin_value, not .user.ini) and cap request body size at the web server; watch memory use.",
+            "Temporary and partial: set session.upload_progress.enabled=0, and on PHP 8.5 also fatal_error_backtraces=0, then restart every worker.",
+            "Temporary and partial: if the application takes no uploads, block multipart/form-data requests at the web server.",
         ],
+        # Distro builds that fix both CVEs without a new upstream version, from each vendor notice.
+        # Used when the package changelog is not installed: Docker's ubuntu and debian images strip /usr/share/doc.
+        # Debian's fixes (DSA-6574-1 and the bookworm update) are upstream releases, so the version check covers them.
+        "vendor_fixed": {
+            "USN-8948-1": {
+                "php8.5": ["8.5.9-0ubuntu2.1", "8.5.4-0ubuntu1.5"],
+                "php8.3": ["8.3.6-0ubuntu0.24.04.13"],
+                "php8.1": ["8.1.2-1ubuntu2.28"],
+            },
+        },
         "references": [
             {"title": "PHP advisory for CVE-2026-109618", "url": "https://github.com/php/php-src/security/advisories/GHSA-w8hw-w9fx-j79w"},
             {"title": "PHP advisory for CVE-2026-109619", "url": "https://github.com/php/php-src/security/advisories/GHSA-6wmf-4rv5-p3rp"},
+            {"title": "Ubuntu USN-8948-1", "url": "https://ubuntu.com/security/notices/USN-8948-1"},
             {"title": "Sansec research", "url": "https://sansec.io/research/php2shell"},
             {"title": "Help Net Security", "url": "https://www.helpnetsecurity.com/2026/10/21/php2shell-php-vulnerabilities-patched-cve-2026-109618-cve-2026-109619/"},
             {"title": "watchTowr FAQ", "url": "https://watchtowr.com/intelligence/php-cve-2026-109618-faq/"},
@@ -68,8 +81,12 @@ ADVISORIES = [
     }
 ]
 ADVISORIES_BY_ID = {a["id"]: a for a in ADVISORIES}
+# The day ADVISORIES (fixed versions and vendor builds) was last checked against the vendors.
+# Bump it with every data update; reports warn once it is older than STALE_AFTER_DAYS.
+DATA_CHECKED = "2026-10-22"
+STALE_AFTER_DAYS = 30
 
-CONFIG_KEYS = ("session.upload_progress.enabled", "memory_limit")
+CONFIG_KEYS = ("session.upload_progress.enabled", "memory_limit", "fatal_error_backtraces")
 
 # Digit runs are capped at 6 and must end there, so an absurdly long number is rejected rather than truncated.
 VERSION_RE = re.compile(r"^(\d{1,6})\.(\d{1,6})\.(\d{1,6})(?!\d)(.*)$", re.S)
@@ -319,6 +336,60 @@ def php_config(path):
     return parse_ini_dump(out) if code == 0 else {}
 
 
+POOL_SECTION_RE = re.compile(r"^\s*\[([^\]]{1,64})\]\s*$")
+POOL_VALUE_RE = re.compile(r"^\s*php(?:_admin)?_(?:value|flag)\[([\w.]{1,64})\]\s*=\s*['\"]?([0-9A-Za-z_.-]{1,32})['\"]?\s*$")
+FPM_INCLUDE_RE = re.compile(r"^\s*include\s*=\s*(\S+)\s*$")
+
+
+def fpm_main_config(path):
+    """The php-fpm.conf this binary reads by packaging convention.
+
+    shortcut: follows the packaging layout only, not a custom -y/--fpm-config; add a --fpm-config
+    option if users report pools it misses.
+    """
+    m = re.match(r"^php-fpm(\d+\.\d+)$", os.path.basename(path))
+    if m:  # Debian, Ubuntu and Sury: /usr/sbin/php-fpm8.3
+        return "/etc/php/%s/fpm/php-fpm.conf" % m.group(1)
+    prefix = os.path.dirname(os.path.dirname(path))  # <root>/usr/sbin/php-fpm -> <root>/usr
+    if prefix.endswith("/usr"):
+        prefix = prefix[:-len("/usr")]  # RHEL, Remi and cPanel keep etc/ beside usr/
+    return os.path.join(prefix or "/", "etc", "php-fpm.conf")
+
+
+def fpm_pool_overrides(path, max_files=200):
+    """Pool-level php_value / php_admin_value settings for CONFIG_KEYS, which `php -i` cannot see.
+
+    Returns {"pool www: memory_limit": "-1"}. Includes are resolved relative to the FPM prefix
+    (the folder above etc/), as php-fpm does.
+    """
+    main = fpm_main_config(path)
+    prefix = os.path.dirname(os.path.dirname(main))
+    files, values, pending = [], {}, [main]
+    while pending and len(files) < max_files:
+        conf = pending.pop(0)
+        if conf in files:
+            continue
+        text, _ = read_text_file(conf, limit=1024 * 1024)
+        if text is None:
+            continue
+        files.append(conf)
+        pool = None
+        for line in text.splitlines():
+            m = POOL_SECTION_RE.match(line)
+            if m:
+                pool = m.group(1)
+                continue
+            m = FPM_INCLUDE_RE.match(line)
+            if m:
+                pattern = m.group(1).replace("${prefix}", prefix).replace("$prefix", prefix)
+                pending.extend(sorted(glob.glob(os.path.join(prefix, pattern)))[:max_files])
+                continue
+            m = POOL_VALUE_RE.match(line)
+            if m and pool and pool != "global" and m.group(1) in CONFIG_KEYS:
+                values["pool %s: %s" % (pool, m.group(1))] = m.group(2)
+    return values
+
+
 def guess_sapi(path):
     name = os.path.basename(path).lower()
     if "fpm" in name:
@@ -440,6 +511,29 @@ def vendor_changelog(owner, path, cves):
     if not text:
         return None
     return cves_named_in(text, cves)
+
+
+def vendor_fixed_build(adv, owner):
+    """(status, reason) from the advisory's list of fixed distro builds, or None without evidence.
+
+    A fixed build only speaks for installs of the same build line: 8.3.6-0ubuntu0.24.04.13 says
+    nothing about a Sury 8.3.6-1+ubuntu24.04.1 or about 8.5.9-0ubuntu2 versus 8.5.4-0ubuntu1.5.
+    """
+    if owner["manager"] != "dpkg" or not owner.get("version"):
+        return None
+    m = re.search(r"php\d+\.\d+", owner.get("source") or owner["name"])
+    installed = package_upstream_version(owner["version"])
+    for notice, builds in sorted(adv.get("vendor_fixed", {}).items()):
+        for build in builds.get(m.group(0) if m else "", []):
+            if not installed.startswith(build.rstrip("0123456789")):
+                continue
+            code, _, _ = run([BIN["dpkg"], "--compare-versions", installed, "ge", build])
+            shown = "package %s %s" % (owner["name"], installed)
+            if code == 0:
+                return PATCHED, "%s is at or above %s, the fixed build in %s" % (shown, build, notice)
+            if code == 1:
+                return VULNERABLE, "%s is below %s, the fixed build in %s" % (shown, build, notice)
+    return None
 
 
 def stale_processes(proc_root="/proc"):
@@ -616,6 +710,8 @@ def inspect_target(path, kind, exec_mode, advisories, stale=None):
         method = "package"
     if not sapi and kind == "binary":
         sapi = guess_sapi(path)
+    if kind == "binary" and "fpm" in os.path.basename(path).lower():
+        config.update(fpm_pool_overrides(path))
 
     version = parse_version(version_text) if version_text else None
     package = "%s %s" % (owner["name"], owner["version"]) if owner else None
@@ -634,6 +730,8 @@ def inspect_target(path, kind, exec_mode, advisories, stale=None):
             status, reason = evaluate(adv, version, None, packaged=bool(owner))
             if owner and evaluate(adv, version, set(), packaged=True)[0] == VULNERABLE:
                 status, reason = evaluate(adv, version, vendor_changelog(owner, path, adv["cves"]), packaged=True)
+                if status != PATCHED:
+                    status, reason = vendor_fixed_build(adv, owner) or (status, reason)
             if status == PATCHED and stale.get(path):
                 pids = ", ".join(str(p) for p in sorted(stale[path])[:5])
                 status = REVIEW
@@ -1067,7 +1165,7 @@ def validate_finding(raw, host):
         value = raw.get(key)
         out[key] = clean(value) if isinstance(value, str) else None
     config = raw.get("config")
-    out["config"] = dict((clean(k, 60), clean(v, 40)) for k, v in list(config.items())[:10]
+    out["config"] = dict((clean(k, 60), clean(v, 40)) for k, v in list(config.items())[:20]
                          if isinstance(k, str) and isinstance(v, str)) if isinstance(config, dict) else {}
     loc = raw.get("location")
     out["location"] = ({"file": clean(loc.get("file")), "line": loc.get("line") if isinstance(loc.get("line"), int) else 0}
@@ -1124,8 +1222,20 @@ def summarize(findings):
     return counts
 
 
+def stale_data_note(today=None):
+    """A warning when the advisory data is old enough that newer fixes may be missing, else None."""
+    checked = datetime.datetime.strptime(DATA_CHECKED, "%Y-%m-%d").date()
+    age = ((today or datetime.date.today()) - checked).days
+    if age <= STALE_AFTER_DAYS:
+        return None
+    return ("This tool's advisory data was last checked on %s (%d days ago), so newer PHP fixes or vendor "
+            "builds may be missing. Get the latest release: %s/releases/latest" % (DATA_CHECKED, age, REPO_URL))
+
+
 def build_report(findings, notes, mode):
     counts = summarize(findings)
+    stale = stale_data_note()
+    notes = notes + [stale] if stale else notes
     return {
         "tool": "php-vuln-check", "version": __version__, "mode": mode,
         "generated": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
