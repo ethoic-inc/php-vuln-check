@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1 (2026-10-22)
+
+Moved to the `ethoic-inc` GitHub organization. Project links, attribution ("An open-source project from Ethoic Inc") and the public contact address (hello@ethoic.com) updated; no change in behavior.
+
 ## 0.1.0 (2026-10-22)
 
 First release, built the week PHP2Shell (CVE-2026-109618 / CVE-2026-109619) was disclosed.

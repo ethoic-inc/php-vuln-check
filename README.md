@@ -2,17 +2,19 @@
 
 **A PHP vulnerability checker for [PHP2Shell](https://sansec.io/research/php2shell) (CVE-2026-109618 and CVE-2026-109619).** It tells you which of your servers, Docker images and pipelines still run vulnerable PHP, including the distro-backport cases that version-only checks get wrong. One file, no dependencies, and it never sends exploit traffic.
 
-[![CI](https://github.com/jake-bowser/php-vuln-check/actions/workflows/ci.yml/badge.svg)](https://github.com/jake-bowser/php-vuln-check/actions/workflows/ci.yml)
+[![CI](https://github.com/ethoic-inc/php-vuln-check/actions/workflows/ci.yml/badge.svg)](https://github.com/ethoic-inc/php-vuln-check/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Python 3.6+](https://img.shields.io/badge/python-3.6%2B-blue)
 ![Dependencies: none](https://img.shields.io/badge/dependencies-none-brightgreen)
+
+*An open-source project from [Ethoic Inc](https://ethoic.com).*
 
 **Tested on real systems, not only fixtures.** CI installs PHP packages in Debian 12 and 13, Ubuntu 20.04 to 24.04, AlmaLinux 8 and 9, Rocky 9, Fedora, Amazon Linux, Alpine and the official `php` images, runs the tool there, and runs the unit tests on Python 3.6 to 3.13. It was security-reviewed independently before release.
 
 ## Check your PHP in 10 seconds
 
 ```bash
-pipx install git+https://github.com/jake-bowser/php-vuln-check
+pipx install git+https://github.com/ethoic-inc/php-vuln-check
 php-vuln-check                 # audit PHP on this server
 php-vuln-check images .        # audit Dockerfiles, compose files and Kubernetes manifests
 ```
@@ -20,7 +22,7 @@ php-vuln-check images .        # audit Dockerfiles, compose files and Kubernetes
 No install needed either. It is a single file with no dependencies, so you can drop it on a server:
 
 ```bash
-curl -fsSLO https://github.com/jake-bowser/php-vuln-check/releases/latest/download/php_vuln_check.py
+curl -fsSLO https://github.com/ethoic-inc/php-vuln-check/releases/latest/download/php_vuln_check.py
 python3 php_vuln_check.py
 ```
 
@@ -130,7 +132,7 @@ jobs:
     permissions: { contents: read, security-events: write }
     steps:
       - uses: actions/checkout@v4
-      - uses: jake-bowser/php-vuln-check@v0.1.0
+      - uses: ethoic-inc/php-vuln-check@v0.1.1
         with:
           fail-on: vulnerable          # or "review" to also fail on floating tags
           sarif-file: php-vuln.sarif
@@ -144,8 +146,8 @@ Findings show up in your repository's Security tab with the Dockerfile line. To 
 ```yaml
 # .pre-commit-config.yaml
 repos:
-  - repo: https://github.com/jake-bowser/php-vuln-check
-    rev: v0.1.0
+  - repo: https://github.com/ethoic-inc/php-vuln-check
+    rev: v0.1.1
     hooks:
       - id: php-vuln-check-images
 ```
@@ -196,6 +198,12 @@ Not yet. Advisories are one entry in the `ADVISORIES` list at the top of `php_vu
 
 Wrong result on your distro, a package manager we should read, or the next PHP advisory: open an issue or a pull request. Start with [CONTRIBUTING.md](CONTRIBUTING.md). To report a security problem in this tool, see [SECURITY.md](SECURITY.md).
 
+Questions, press or anything else: **hello@ethoic.com**.
+
+## About Ethoic
+
+[Ethoic Inc](https://ethoic.com) builds human-centered AI tools. We think software you depend on should be software you can check, so this tool runs on your own machine, has no telemetry and only talks to the hosts you point it at.
+
 ## Disclaimer
 
-This is an independent project, not affiliated with the PHP Group, Sansec, Assetnote, watchTowr or anyone else named here. It is provided as is under the [MIT license](LICENSE). A PATCHED result is evidence about versions and changelogs, not a guarantee. Only check systems you own or are authorized to check.
+php-vuln-check is an open-source project from Ethoic Inc. It is not affiliated with the PHP Group, Sansec, Assetnote, watchTowr or anyone else named here. It is provided as is under the [MIT license](LICENSE). A PATCHED result is evidence about versions and changelogs, not a guarantee. Only check systems you own or are authorized to check.

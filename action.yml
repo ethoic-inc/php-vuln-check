@@ -1,6 +1,6 @@
 name: PHP Vuln Check
 description: Fail the build when Dockerfiles, compose files or Kubernetes manifests use a PHP version affected by PHP2Shell (CVE-2026-109618 / CVE-2026-109619).
-author: Jake Bowser
+author: Ethoic Inc
 branding:
   icon: shield
   color: red

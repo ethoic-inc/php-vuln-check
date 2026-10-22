@@ -7,7 +7,7 @@ reads versions, vendor changelogs and config, and never probes a target into
 failing.
 
 Single file, standard library only, Python 3.6+.
-https://github.com/jake-bowser/php-vuln-check  (MIT License)
+https://github.com/ethoic-inc/php-vuln-check  (MIT License)
 """
 import argparse
 import csv
@@ -30,8 +30,8 @@ import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
-__version__ = "0.1.0"
-REPO_URL = "https://github.com/jake-bowser/php-vuln-check"
+__version__ = "0.1.1"
+REPO_URL = "https://github.com/ethoic-inc/php-vuln-check"
 
 VULNERABLE, REVIEW, PATCHED, ERROR, NONE = "VULNERABLE", "REVIEW", "PATCHED", "ERROR", "NONE"
 STATUS_ORDER = {VULNERABLE: 0, ERROR: 1, REVIEW: 2, PATCHED: 3, NONE: 4}

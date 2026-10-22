@@ -23,5 +23,6 @@
     <text x="308" y="518" fill="#e6e9f5">php:8.4.27-apache</text>
   </g>
 
-  <text x="80" y="597" font-family="Menlo, Consolas, monospace" font-size="26" fill="#8fa0d6">github.com/jake-bowser/php-vuln-check</text>
+  <text x="80" y="597" font-family="Menlo, Consolas, monospace" font-size="26" fill="#8fa0d6">github.com/ethoic-inc/php-vuln-check</text>
+  <text x="1200" y="597" text-anchor="end" font-family="Helvetica Neue, Arial, sans-serif" font-size="26" fill="#b8c0dc">An Ethoic Inc project</text>
 </svg>
