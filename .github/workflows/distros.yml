@@ -1,0 +1,59 @@
+name: Real distros
+
+# Installs real PHP packages in real distro containers and runs the tool and its
+# unit tests there. This is what proves package-ownership, changelog lookup,
+# `php -v` / `php -i` parsing and Python 3.6 compatibility outside of fixtures.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  distro:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.experimental == true }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Debian family. Docs are re-enabled so the package changelog exists, as on a normal server.
+          - { name: "debian-11 (PHP 7.4)", image: "debian:11", expect_pkg: 1, expect_modphp: 1, install: "rm -f /etc/dpkg/dpkg.cfg.d/docker* /etc/dpkg/dpkg.cfg.d/excludes; apt-get update -qq && apt-get install -y -qq python3 php-cli php-fpm libapache2-mod-php" }
+          - { name: "debian-12 (PHP 8.2)", image: "debian:12", expect_pkg: 1, expect_modphp: 1, install: "rm -f /etc/dpkg/dpkg.cfg.d/docker* /etc/dpkg/dpkg.cfg.d/excludes; apt-get update -qq && apt-get install -y -qq python3 php-cli php-fpm libapache2-mod-php" }
+          - { name: "debian-13", image: "debian:13", experimental: true, expect_pkg: 1, expect_modphp: 1, install: "rm -f /etc/dpkg/dpkg.cfg.d/docker* /etc/dpkg/dpkg.cfg.d/excludes; apt-get update -qq && apt-get install -y -qq python3 php-cli php-fpm libapache2-mod-php" }
+          - { name: "ubuntu-20.04 (PHP 7.4)", image: "ubuntu:20.04", expect_pkg: 1, expect_modphp: 1, install: "rm -f /etc/dpkg/dpkg.cfg.d/docker* /etc/dpkg/dpkg.cfg.d/excludes; apt-get update -qq && apt-get install -y -qq python3 php-cli php-fpm libapache2-mod-php" }
+          - { name: "ubuntu-22.04 (PHP 8.1)", image: "ubuntu:22.04", expect_pkg: 1, expect_modphp: 1, install: "rm -f /etc/dpkg/dpkg.cfg.d/docker* /etc/dpkg/dpkg.cfg.d/excludes; apt-get update -qq && apt-get install -y -qq python3 php-cli php-fpm libapache2-mod-php" }
+          - { name: "ubuntu-24.04 (PHP 8.3)", image: "ubuntu:24.04", expect_pkg: 1, expect_modphp: 1, install: "rm -f /etc/dpkg/dpkg.cfg.d/docker* /etc/dpkg/dpkg.cfg.d/excludes; apt-get update -qq && apt-get install -y -qq python3 php-cli php-fpm libapache2-mod-php" }
+          # Same distro with the Docker image's default of no package docs: no changelog to read.
+          - { name: "debian-12 without package docs", image: "debian:12", expect_pkg: 1, install: "apt-get update -qq && apt-get install -y -qq python3 php-cli php-fpm" }
+          # RHEL family. AlmaLinux 8 ships Python 3.6, which is the oldest we claim to support.
+          - { name: "almalinux-8 (Python 3.6 and PHP 7.2)", image: "almalinux:8", expect_pkg: 1, install: "dnf install -y -q python3 php-cli php-fpm" }
+          - { name: "almalinux-9", image: "almalinux:9", expect_pkg: 1, install: "dnf install -y -q python3 php-cli php-fpm" }
+          - { name: "rockylinux-9", image: "rockylinux:9", expect_pkg: 1, install: "dnf install -y -q python3 php-cli php-fpm" }
+          - { name: "fedora", image: "fedora:latest", experimental: true, expect_pkg: 1, install: "dnf install -y -q python3 php-cli php-fpm" }
+          - { name: "amazonlinux-2023", image: "amazonlinux:2023", experimental: true, expect_pkg: 1, install: "dnf install -y -q python3 php8.3-cli php8.3-fpm" }
+          # Alpine has no dpkg or rpm; it tracks upstream versions.
+          - { name: "alpine", image: "alpine:latest", experimental: true, install: "apk add --no-cache python3 php83 php83-fpm" }
+          # Official PHP images: compiled from source, no distro package owns the binary.
+          - { name: "official php:8.1-cli", image: "php:8.1-cli", install: "apt-get update -qq && apt-get install -y -qq python3" }
+          - { name: "official php:8.3-apache", image: "php:8.3-apache", install: "apt-get update -qq && apt-get install -y -qq python3" }
+          - { name: "official php:8.4-fpm", image: "php:8.4-fpm", install: "apt-get update -qq && apt-get install -y -qq python3" }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PHP and run the smoke test in ${{ matrix.image }}
+        env:
+          INSTALL: ${{ matrix.install }}
+          IMAGE: ${{ matrix.image }}
+          EXPECT_PKG: ${{ matrix.expect_pkg }}
+          EXPECT_MODPHP: ${{ matrix.expect_modphp }}
+        run: |
+          docker run --rm -v "$PWD":/w -w /w \
+            -e DEBIAN_FRONTEND=noninteractive -e TZ=UTC \
+            -e EXPECT_PKG -e EXPECT_MODPHP \
+            "$IMAGE" sh -c "$INSTALL && python3 tests/distro_smoke.py"
