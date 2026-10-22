@@ -15,6 +15,12 @@
 - Workflows: `ci.yml`, `distros.yml` (18 real-distro legs, skipped for docs-only changes), `pages.yml`, `release.yml` (tag push publishes; run it by hand for a dry run), Dependabot grouped weekly.
 - The org profile page lives in the separate public repo `ethoic-inc/.github` (`profile/README.md`, wording taken from ethoic.com).
 
+## Branch claude/vendor-fixed-versions (2026-10-22, not merged or released)
+- `scan` uses `vendor_fixed` (fixed distro builds from vendor notices; Ubuntu USN-8948-1 so far) when the dpkg changelog is missing, e.g. in Docker's ubuntu images. Same build line only, compared with `dpkg --compare-versions`. Add new USN builds there as Ubuntu ships them (20.04 / PHP 7.4 is not in USN-8948-1).
+- `scan` reads PHP-FPM pool `php_value` / `php_admin_value` overrides from the conventional `php-fpm.conf` and includes; reports `fatal_error_backtraces`. Mitigations reordered to PHP's advisory order.
+- New CI leg `ubuntu-24.04 without package docs` (must be PATCHED and show a pool override). Not run locally: no Docker on the Mac mini.
+- Release (v0.1.3) is Jake's call after the PR merges.
+
 ## Next
 1. Watch Issues and Discussions; wrong-detection reports (label `detection`) are the best signal.
 2. Add the next PHP advisory as one dict in `ADVISORIES` (see CONTRIBUTING.md).

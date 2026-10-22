@@ -9,6 +9,8 @@ unit tests on this container's Python.
 Environment:
   EXPECT_PKG=1      at least one finding must be owned by a dpkg/rpm package
   EXPECT_MODPHP=1   an Apache libphp module must be found with a version
+  EXPECT_PATCHED=1  a package-owned PHP binary must be PATCHED (the distro ships the fix)
+  EXPECT_POOL=1     an FPM finding must carry a pool override read from the pool config
   SKIP_PHP=1        no PHP is installed: only check the images command, output and unit tests
 """
 import json
@@ -86,6 +88,12 @@ if os.environ.get("SKIP_PHP") != "1":
 
     if os.environ.get("EXPECT_PKG") == "1" and not any(f["package"] for f in executed):
         fail("expected at least one package-owned PHP install")
+    if os.environ.get("EXPECT_PATCHED") == "1" and not any(
+            f["package"] and f["kind"] == "binary" and f["status"] == "PATCHED" for f in executed):
+        fail("expected a package-owned PHP binary to be PATCHED")
+    if os.environ.get("EXPECT_POOL") == "1" and not any(
+            k.startswith("pool ") for f in executed for k in f["config"]):
+        fail("expected an FPM pool override in the config of some finding")
     if os.environ.get("EXPECT_MODPHP") == "1" and not any(f["kind"] == "mod_php" and f["version"] for f in executed):
         fail("expected an Apache libphp module with a readable version")
 

@@ -203,6 +203,110 @@ class ChangelogEvidence(unittest.TestCase):
         self.assertEqual((owner["name"], owner["version"], owner["source"]), ("php8.2-cli", "8.2.30-1", "php8.2"))
 
 
+class VendorFixedBuilds(unittest.TestCase):
+    """Fixed distro builds from vendor notices, for when the package changelog is missing."""
+
+    @staticmethod
+    def fake_run(cmd, **kw):
+        # dpkg --compare-versions A ge B, for same-line builds that differ only in the last number
+        a, b = (int(v.rsplit(".", 1)[1]) for v in (cmd[2], cmd[4]))
+        return (0 if a >= b else 1), "", ""
+
+    def verdict(self, version, source="php8.3", manager="dpkg", name="php8.3-cli"):
+        owner = {"manager": manager, "name": name, "version": version, "source": source}
+        with mock.patch.object(pvc, "run", self.fake_run):
+            return pvc.vendor_fixed_build(ADV, owner)
+
+    def test_same_build_line_at_or_above_fix_is_patched(self):
+        for version in ("8.3.6-0ubuntu0.24.04.13", "8.3.6-0ubuntu0.24.04.14"):
+            status, reason = self.verdict(version)
+            self.assertEqual(status, pvc.PATCHED, version)
+            self.assertIn("USN-8948-1", reason)
+
+    def test_same_build_line_below_fix_is_vulnerable(self):
+        status, reason = self.verdict("8.3.6-0ubuntu0.24.04.12")
+        self.assertEqual(status, pvc.VULNERABLE)
+        self.assertIn("below 8.3.6-0ubuntu0.24.04.13", reason)
+
+    def test_other_build_lines_give_no_evidence(self):
+        self.assertIsNone(self.verdict("8.3.6-1+ubuntu24.04.1+deb.sury.org+1"))
+        # 26.10's unpatched build is newer than 26.04's fixed one, but a different line.
+        self.assertIsNone(self.verdict("8.5.9-0ubuntu2", source="php8.5", name="php8.5-cli"))
+        self.assertIsNone(self.verdict("7.4.3-4ubuntu2.29", source="php7.4", name="php7.4-cli"))
+        self.assertIsNone(self.verdict("8.3.6-0ubuntu0.24.04.13", manager="rpm"))
+        self.assertIsNone(self.verdict(""))
+
+    def test_source_falls_back_to_package_name(self):
+        self.assertEqual(self.verdict("8.3.6-0ubuntu0.24.04.13", source="")[0], pvc.PATCHED)
+
+    def test_scan_uses_fixed_build_when_changelog_is_missing(self):
+        with tempfile.TemporaryDirectory() as d:
+            fake_php(os.path.join(d, "php8.3"), "8.3.6")
+            dpkg = os.path.join(d, "fake-dpkg")
+            write_exec(dpkg, '#!/bin/sh\n[ "$2" = "$4" ]\n')
+            owner = {"manager": "dpkg", "name": "php8.3-cli", "version": "8.3.6-0ubuntu0.24.04.13", "source": "php8.3"}
+            with mock.patch.dict(pvc.BIN, {"dpkg": dpkg}), \
+                    mock.patch.object(pvc, "package_owner", lambda p: owner), \
+                    mock.patch.object(pvc, "vendor_changelog", lambda *a: None):
+                code, out = cli("scan", "--no-defaults", "--path", d, "--format", "json", "--exec")
+        (finding,) = json.loads(out)["findings"]
+        self.assertEqual((code, finding["status"]), (0, pvc.PATCHED))
+        self.assertIn("fixed build in USN-8948-1", finding["reason"])
+
+
+class FpmPoolOverrides(unittest.TestCase):
+    def test_main_config_by_packaging_layout(self):
+        cases = {
+            "/usr/sbin/php-fpm8.3": "/etc/php/8.3/fpm/php-fpm.conf",
+            "/usr/sbin/php-fpm": "/etc/php-fpm.conf",
+            "/usr/local/sbin/php-fpm": "/usr/local/etc/php-fpm.conf",
+            "/opt/remi/php83/root/usr/sbin/php-fpm": "/opt/remi/php83/root/etc/php-fpm.conf",
+            "/opt/cpanel/ea-php83/root/usr/sbin/php-fpm": "/opt/cpanel/ea-php83/root/etc/php-fpm.conf",
+            "/opt/plesk/php/8.3/sbin/php-fpm": "/opt/plesk/php/8.3/etc/php-fpm.conf",
+        }
+        for binary, conf in cases.items():
+            self.assertEqual(pvc.fpm_main_config(binary), conf)
+
+    def test_reads_pool_values_through_relative_and_absolute_includes(self):
+        with tempfile.TemporaryDirectory() as root:
+            os.makedirs(os.path.join(root, "sbin"))
+            os.makedirs(os.path.join(root, "etc", "php-fpm.d"))
+            os.makedirs(os.path.join(root, "other"))
+            fake_php(os.path.join(root, "sbin", "php-fpm"), "8.2.30", "fpm-fcgi")
+            write(os.path.join(root, "etc", "php-fpm.conf"),
+                  "[global]\nphp_admin_value[memory_limit] = 1G\ninclude=etc/php-fpm.d/*.conf\n"
+                  "include=%s/other/*.conf\n" % root)
+            write(os.path.join(root, "etc", "php-fpm.d", "www.conf"),
+                  "[www]\n;php_admin_value[memory_limit] = 32M\nphp_admin_value[memory_limit] = -1\n"
+                  "php_admin_flag[session.upload_progress.enabled] = off\nphp_value[error_log] = /tmp/x\n")
+            write(os.path.join(root, "other", "shop.conf"), "[shop]\nphp_value[memory_limit] = '512M'\n")
+            got = pvc.fpm_pool_overrides(os.path.join(root, "sbin", "php-fpm"))
+            self.assertEqual(got, {"pool www: memory_limit": "-1",
+                                   "pool www: session.upload_progress.enabled": "off",
+                                   "pool shop: memory_limit": "512M"})
+            code, out = cli("scan", "--no-defaults", "--path", os.path.join(root, "sbin"), "--format", "json", "--exec")
+        (finding,) = json.loads(out)["findings"]
+        self.assertEqual(finding["config"]["pool www: memory_limit"], "-1")
+        self.assertEqual(finding["config"]["memory_limit"], "128M")
+
+    def test_missing_or_looping_config_is_harmless(self):
+        self.assertEqual(pvc.fpm_pool_overrides("/nonexistent/sbin/php-fpm"), {})
+        with tempfile.TemporaryDirectory() as root:
+            os.makedirs(os.path.join(root, "sbin"))
+            os.makedirs(os.path.join(root, "etc"))
+            write(os.path.join(root, "etc", "php-fpm.conf"), "include=etc/php-fpm.conf\n")
+            self.assertEqual(pvc.fpm_pool_overrides(os.path.join(root, "sbin", "php-fpm")), {})
+
+
+class Mitigations(unittest.TestCase):
+    def test_primary_config_mitigation_comes_before_the_multipart_block(self):
+        steps = ADV["mitigations"]
+        first = lambda word: next(i for i, s in enumerate(steps) if word in s)
+        self.assertLess(first("memory_limit=-1"), first("multipart/form-data"))
+        self.assertTrue(any("fatal_error_backtraces=0" in s for s in steps))
+        self.assertIn("fatal_error_backtraces", pvc.CONFIG_KEYS)
+
+
 class RunHelper(unittest.TestCase):
     def test_no_terminal_input(self):
         code, out, _ = pvc.run(["cat"], timeout=5)
