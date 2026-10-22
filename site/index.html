@@ -76,10 +76,10 @@ footer { margin-top: 56px; color: var(--muted); font-size: .9rem; }
   </div>
 
   <h2>Check your PHP in 10 seconds</h2>
-<pre><code>pipx install git+https://github.com/jake-bowser/php-vuln-check
+<pre tabindex="0"><code>pipx install git+https://github.com/jake-bowser/php-vuln-check
 php-vuln-check            # audit PHP on this server
 php-vuln-check images .   # audit Dockerfiles, compose files, Kubernetes manifests</code></pre>
-<pre><code><span class="bad">VULNERABLE</span>  php:8.3.35-fpm-alpine
+<pre tabindex="0"><code><span class="bad">VULNERABLE</span>  php:8.3.35-fpm-alpine
             8.3.35 is below the fixed release 8.3.36
 <span class="warn">REVIEW</span>      php:8.3-cli
             floating tag: pin it to 8.3.36 or later and rebuild with --pull
