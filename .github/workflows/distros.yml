@@ -41,20 +41,24 @@ jobs:
           - { name: "amazonlinux-2023", image: "amazonlinux:2023", experimental: true, expect_pkg: 1, install: "dnf install -y -q python3 php8.3-cli php8.3-fpm" }
           # Alpine has no dpkg or rpm; it tracks upstream versions.
           - { name: "alpine", image: "alpine:latest", experimental: true, install: "apk add --no-cache python3 php83 php83-fpm" }
+          # Oldest Python interpreters we claim to support. No PHP here: unit tests, images and output only.
+          - { name: "python 3.6 (unit tests)", image: "python:3.6-slim", skip_php: 1, install: "true" }
+          - { name: "python 3.7 (unit tests)", image: "python:3.7-slim", skip_php: 1, install: "true" }
           # Official PHP images: compiled from source, no distro package owns the binary.
           - { name: "official php:8.1-cli", image: "php:8.1-cli", install: "apt-get update -qq && apt-get install -y -qq python3" }
           - { name: "official php:8.3-apache", image: "php:8.3-apache", install: "apt-get update -qq && apt-get install -y -qq python3" }
           - { name: "official php:8.4-fpm", image: "php:8.4-fpm", install: "apt-get update -qq && apt-get install -y -qq python3" }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Install PHP and run the smoke test in ${{ matrix.image }}
         env:
           INSTALL: ${{ matrix.install }}
           IMAGE: ${{ matrix.image }}
           EXPECT_PKG: ${{ matrix.expect_pkg }}
           EXPECT_MODPHP: ${{ matrix.expect_modphp }}
+          SKIP_PHP: ${{ matrix.skip_php }}
         run: |
           docker run --rm -v "$PWD":/w -w /w \
             -e DEBIAN_FRONTEND=noninteractive -e TZ=UTC \
-            -e EXPECT_PKG -e EXPECT_MODPHP \
+            -e EXPECT_PKG -e EXPECT_MODPHP -e SKIP_PHP \
             "$IMAGE" sh -c "$INSTALL && python3 tests/distro_smoke.py"

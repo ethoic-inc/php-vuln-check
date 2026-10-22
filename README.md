@@ -22,7 +22,7 @@ curl -fsSLO https://github.com/jake-bowser/php-vuln-check/releases/latest/downlo
 python3 php_vuln_check.py
 ```
 
-Each release also publishes `SHA256SUMS` so you can verify the file first.
+Each release also publishes `SHA256SUMS` so you can verify the file first. On Python 3.6 hosts this single file is the way to go; `pipx` needs a newer Python.
 
 ```text
 VULNERABLE  php:7.4-apache
@@ -33,7 +33,7 @@ VULNERABLE  php:7.4-apache
 VULNERABLE  php:8.3.35-fpm-alpine
             PHP 8.3.35
             8.3.35 is below the fixed release 8.3.36
-            at examples/demo/app/Dockerfile:4
+            at examples/demo/app/Dockerfile:3
 
 REVIEW      php:8.3-cli
             PHP 8.3
@@ -45,7 +45,7 @@ PATCHED     php:8.4.27-apache
             8.4.27 is the fixed release
             at examples/demo/app/docker-compose.yml:3
 
-Summary: 2 vulnerable · 1 need review · 1 patched
+Summary: 2 vulnerable | 1 need review | 1 patched
 ```
 
 Try it yourself: `php-vuln-check images examples/demo`.
@@ -71,15 +71,17 @@ Details and mitigations: [Sansec](https://sansec.io/research/php2shell), [Help N
 | `php-vuln-check scan` | every `php`, `php-fpm`, `php-cgi`, `lsphp` and Apache `libphp*.so` on this machine: version, SAPI, owning package, vendor changelog, `session.upload_progress` and `memory_limit` | high |
 | `php-vuln-check images PATH` | `FROM` lines in Dockerfiles (with `ARG` defaults), `image:` in compose files and Kubernetes manifests | high for pinned tags |
 | `php-vuln-check images --docker` | images of running containers | high for pinned tags |
+| `php-vuln-check images --kubectl` | images of every pod in the current cluster (`--kubectl-args "--context prod"`) | high for pinned tags |
 | `php-vuln-check fleet hosts.txt` | runs `scan` on every host over SSH, nothing installed there | high |
-| `php-vuln-check url https://example.com` | the PHP version a site advertises in `X-Powered-By` (one normal GET) | low |
+| `php-vuln-check url https://example.com` | the PHP version a site advertises in `X-Powered-By` (one normal GET). Never says PATCHED: a banner proves nothing | low |
 
 Every result is one of:
 
-- **PATCHED**: version at or above the fix, or the vendor changelog names both CVEs.
+- **PATCHED**: version at or above the fix, or the vendor changelog names both CVEs. It describes the files on disk; `scan` downgrades it to REVIEW when running processes still use a replaced PHP file, and you should restart PHP-FPM or Apache after any update.
 - **VULNERABLE**: below the fix with no backport evidence, or an end-of-life branch.
-- **REVIEW**: it cannot tell (floating image tag, hidden version, pre-release). Not a clean bill of health.
-- **ERROR**: an SSH or network failure.
+- **REVIEW**: it cannot tell (floating image tag, digest-pinned image, hidden version, pre-release, a package whose changelog is not installed). Not a clean bill of health.
+- **NONE**: `fleet` found no PHP on that host in the standard locations. This is not PATCHED: PHP in a custom prefix, container or vhost folder would not appear.
+- **ERROR**: an SSH, network or file-reading failure. Unreadable or oversized Dockerfiles are errors, never a silent pass.
 
 ## Why another PHP2Shell scanner?
 
@@ -113,7 +115,7 @@ If a vendor shipped a fix without naming the CVE, you will see a false `VULNERAB
 php-vuln-check fleet hosts.txt --jobs 16 --format csv -o php-exposure.csv
 ```
 
-The script is streamed over SSH (`python3 -` on the host), so nothing is installed or left behind. You need key-based SSH and Python 3 on each host.
+The script is streamed over SSH (`python3 -` on the host), so nothing is installed or left behind. You need key-based SSH and Python 3 on each host. Output from the hosts is validated before it is shown. A host where no PHP is found is reported as NONE, not PATCHED.
 
 ## Gate your pipeline
 
@@ -135,16 +137,18 @@ jobs:
         with: { sarif_file: php-vuln.sarif }
 ```
 
-Findings show up in your repository's Security tab with the Dockerfile line. Other CI systems: run `php-vuln-check images . --fail-on vulnerable`. Exit codes are `0` clean, `1` vulnerable, `2` needs review, `3` error. Formats: `--format text|json|csv|sarif`.
+Findings show up in your repository's Security tab with the Dockerfile line. Other CI systems: run `php-vuln-check images . --fail-on vulnerable`. Exit codes are `0` clean, `1` vulnerable, `2` needs review, `3` error or bad usage (a mistyped path is an error, not a clean scan). Formats: `--format text|json|csv|sarif`.
 
 ## Limits
 
 - It does not test whether a host is exploitable. It tells you whether the PHP on it is patched.
-- `images` reads tags in your files. It does not open the image, so a `FROM` line you rebuild later can drift. Pin full versions and rebuild with `--pull`.
+- `images` reads tags in your files. It does not open the image, so a `FROM` line you rebuild later can drift. Pin full versions and rebuild with `--pull`. A version that comes from an `ARG` default or a `${VAR:-default}` can be overridden by a build argument or `.env` file, so it can be VULNERABLE or REVIEW but never PATCHED. Digest-pinned references are REVIEW. Third-party images that merely name themselves `php` are never PATCHED from their tag.
+- Directory scans read Dockerfiles (any `Dockerfile*`, `*.Dockerfile`, `Containerfile*`), `COPY --from=` images, and `*.yml`/`*.yaml` files with `image:` entries. JSON manifests are read when you pass them by name. Helm values files that split `repository` and `tag` are not read yet.
+- SARIF output includes findings that have a file location (the `images` command), because GitHub code scanning needs one.
 - Config findings (`session.upload_progress.enabled`, `memory_limit`) come from `php -i` for that binary. PHP-FPM pool overrides and `.user.ini` files are not visible. They are hints, not proof, and the partial mitigations they relate to do not replace patching.
-- `scan` runs `php -n -v` and `php -i` on the PHP binaries it finds. Use `--no-exec` to read versions from files and the package manager instead, especially when pointing `--path` at a directory you do not trust.
+- `scan` runs `php -n -v` and `php -i` only on binaries that are owned by root (or you) and that neither they nor their parent folders are writable by group or others. Anything else, such as a binary under a tenant's home directory, is read statically and never run. `--no-exec` runs nothing; `--exec` runs everything it finds. Programs are run with no terminal input, a timeout and capped output.
 - Linux and macOS hosts. Windows is not supported yet.
-- Written for Python 3.6+ so it runs on older enterprise hosts; CI covers 3.8 to 3.13. It is a new tool: read the results critically and report anything that looks wrong.
+- Written for Python 3.6+ so it runs on older enterprise hosts. CI runs the tests on 3.6, 3.7 and 3.8 to 3.13, and runs the tool against real PHP packages on Debian, Ubuntu, AlmaLinux, Rocky, Fedora, Amazon Linux, Alpine and the official PHP images. It is a new tool: read the results critically and report anything that looks wrong.
 
 ## FAQ
 
@@ -164,10 +168,10 @@ Often as a backport on an older version number. `scan` checks the package change
 `php-vuln-check images .` reads your Dockerfiles, compose files and Kubernetes manifests. `php-vuln-check images --image php:8.3-fpm` checks one reference, and `--docker` checks running containers.
 
 **Can I scan a website remotely?**
-`php-vuln-check url https://example.com` reads the advertised `X-Powered-By` header with one ordinary request. Many sites hide it and backports are invisible from outside, so treat it as a hint and run `scan` on the server.
+`php-vuln-check url https://example.com` reads the advertised `X-Powered-By` header with one ordinary request. Many sites hide it, a proxy can fake it and backports are invisible from outside, so it only ever reports REVIEW or ERROR. Run `scan` on the server for a real answer.
 
 **Will it crash or slow my server?**
-It sends no exploit traffic. `scan` reads files and runs `php -n -v` and `php -i`. `--no-exec` skips even that.
+It sends no exploit traffic. `scan` reads files and runs `php -n -v` and `php -i` on trusted binaries only. `--no-exec` skips even that.
 
 **What do I do if it says VULNERABLE?**
 Update PHP and restart PHP-FPM or Apache. Until then, blocking `multipart/form-data` at the web server is a partial, temporary mitigation that breaks uploads. See the [Sansec write-up](https://sansec.io/research/php2shell) for exact snippets.

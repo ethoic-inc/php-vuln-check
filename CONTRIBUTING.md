@@ -24,6 +24,8 @@ Advisories are one dict in the `ADVISORIES` list at the top of `php_vuln_check.p
 - Standard library only, one file, Python 3.6-compatible. `fleet` streams this file over SSH.
 - No exploit or crash-inducing traffic, ever. This tool reads, it does not probe.
 - `PATCHED` needs evidence. When unsure, return `REVIEW`.
+- Input is hostile: files, remote hosts, headers and image tags. Bound it, validate it, never execute it unless the binary is trusted (see `AGENTS.md`).
+- Keep output ASCII.
 
 ## Run the tests
 
