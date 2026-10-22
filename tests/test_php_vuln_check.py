@@ -449,6 +449,12 @@ class ScanWithFakeBinaries(unittest.TestCase):
         os.symlink(os.path.join(self.dir, "php8.2"), os.path.join(self.dir, "php"))
         self.assertEqual(len(self.scan()[1]["findings"]), 1)
 
+    def test_symlink_named_php_that_points_elsewhere_is_ignored(self):
+        os.symlink("/bin/sh", os.path.join(self.dir, "php-fpm"))
+        os.symlink("/bin/sh", os.path.join(self.dir, "php"))
+        code, report = self.scan()
+        self.assertEqual(report["findings"], [])
+
     def test_hostile_binary_is_bounded(self):
         write_exec(os.path.join(self.dir, "php"), "#!/bin/sh\nexec yes\n")
         start = time.time()

@@ -518,6 +518,7 @@ def error_finding(adv, kind, target, reason, **extra):
 # php, php8.2, php5-fpm, php-fpm8.2, php-cgi, lsphp83 ... but not php-config or phpize
 BIN_NAME_RE = re.compile(r"^(?:lsphp[0-9.]*|php[0-9.]*(?:-(?:fpm|cgi)[0-9.]*)?)$")
 LIBPHP_RE = re.compile(r"^libphp[0-9.\-]*\.so$")
+REAL_NAME_RE = re.compile(r"^(?:lsphp|php|libphp)")
 SKIP_DIRS = {".git", "node_modules", ".venv"}
 PSEUDO_FS = ("proc", "sys", "dev", "run")
 
@@ -545,6 +546,10 @@ def _consider(path, seen, found):
         return
     real = os.path.realpath(path)
     if real in seen or not os.path.isfile(real):
+        return
+    # The link's name matched, but what it points at must still look like PHP: a file called
+    # "php" that is really a symlink to /bin/sh must not be treated as (or run as) PHP.
+    if not REAL_NAME_RE.match(os.path.basename(real)):
         return
     seen.add(real)
     found.append((real, kind))
