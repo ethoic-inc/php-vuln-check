@@ -6,7 +6,9 @@ name: Real distros
 on:
   push:
     branches: [main]
+    paths-ignore: ["docs/**", "site/**", "**.md", ".github/ISSUE_TEMPLATE/**", ".github/dependabot.yml"]
   pull_request:
+    paths-ignore: ["docs/**", "site/**", "**.md", ".github/ISSUE_TEMPLATE/**", ".github/dependabot.yml"]
   workflow_dispatch:
   schedule:
     - cron: "17 6 * * 1"

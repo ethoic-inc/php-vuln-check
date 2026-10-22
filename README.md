@@ -148,7 +148,9 @@ repos:
     rev: v0.1.0
     hooks:
       - id: php-vuln-check-images
-``` Other CI systems: run `php-vuln-check images . --fail-on vulnerable`. Exit codes are `0` clean, `1` vulnerable, `2` needs review, `3` error or bad usage (a mistyped path is an error, not a clean scan). Formats: `--format text|json|csv|sarif`.
+```
+
+Other CI systems: run `php-vuln-check images . --fail-on vulnerable`. Exit codes are `0` clean, `1` vulnerable, `2` needs review, `3` error or bad usage (a mistyped path is an error, not a clean scan). Formats: `--format text|json|csv|sarif`.
 
 ## Limits
 
