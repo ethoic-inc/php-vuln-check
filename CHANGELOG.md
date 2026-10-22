@@ -11,4 +11,4 @@ First release, built the week PHP2Shell (CVE-2026-109618 / CVE-2026-109619) was 
 - Output as text, JSON, CSV or SARIF. Exit codes 0/1/2/3, where 3 covers errors and bad usage.
 - Hardened after an independent security review: no PATCHED from values that can be overridden (build args, digests, third-party images, banners), no execution of untrusted binaries by default, hostile-input limits for files and processes, validated `fleet` output, sanitized text and CSV, and a NONE status so a host without PHP is not counted as patched.
 - `scan` notices running processes that still use a replaced PHP file and asks for a restart.
-- GitHub Action for CI gating and code scanning.
+- GitHub Action and pre-commit hook for CI gating and code scanning.

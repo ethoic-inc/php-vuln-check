@@ -137,7 +137,16 @@ jobs:
         with: { sarif_file: php-vuln.sarif }
 ```
 
-Findings show up in your repository's Security tab with the Dockerfile line. Other CI systems: run `php-vuln-check images . --fail-on vulnerable`. Exit codes are `0` clean, `1` vulnerable, `2` needs review, `3` error or bad usage (a mistyped path is an error, not a clean scan). Formats: `--format text|json|csv|sarif`.
+Findings show up in your repository's Security tab with the Dockerfile line. To block it earlier, add the pre-commit hook:
+
+```yaml
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/jake-bowser/php-vuln-check
+    rev: v0.1.0
+    hooks:
+      - id: php-vuln-check-images
+``` Other CI systems: run `php-vuln-check images . --fail-on vulnerable`. Exit codes are `0` clean, `1` vulnerable, `2` needs review, `3` error or bad usage (a mistyped path is an error, not a clean scan). Formats: `--format text|json|csv|sarif`.
 
 ## Limits
 
