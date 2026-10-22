@@ -24,7 +24,8 @@ jobs:
       matrix:
         include:
           # Debian family. Docs are re-enabled so the package changelog exists, as on a normal server.
-          - { name: "debian-11 (PHP 7.4)", image: "debian:11", expect_pkg: 1, expect_modphp: 1, install: "rm -f /etc/dpkg/dpkg.cfg.d/docker* /etc/dpkg/dpkg.cfg.d/excludes; apt-get update -qq && apt-get install -y -qq python3 php-cli php-fpm libapache2-mod-php" }
+          # Debian 11 is end-of-life: its packages moved to archive.debian.org, so this leg is best effort.
+          - { name: "debian-11 (PHP 7.4)", image: "debian:11", experimental: true, expect_pkg: 1, expect_modphp: 1, install: "sed -i -e 's|deb.debian.org/debian-security|archive.debian.org/debian-security|' -e 's|deb.debian.org/debian|archive.debian.org/debian|' /etc/apt/sources.list; rm -f /etc/dpkg/dpkg.cfg.d/docker* /etc/dpkg/dpkg.cfg.d/excludes; apt-get -o Acquire::Check-Valid-Until=false update -qq && apt-get install -y -qq python3 php-cli php-fpm libapache2-mod-php" }
           - { name: "debian-12 (PHP 8.2)", image: "debian:12", expect_pkg: 1, expect_modphp: 1, install: "rm -f /etc/dpkg/dpkg.cfg.d/docker* /etc/dpkg/dpkg.cfg.d/excludes; apt-get update -qq && apt-get install -y -qq python3 php-cli php-fpm libapache2-mod-php" }
           - { name: "debian-13", image: "debian:13", experimental: true, expect_pkg: 1, expect_modphp: 1, install: "rm -f /etc/dpkg/dpkg.cfg.d/docker* /etc/dpkg/dpkg.cfg.d/excludes; apt-get update -qq && apt-get install -y -qq python3 php-cli php-fpm libapache2-mod-php" }
           - { name: "ubuntu-20.04 (PHP 7.4)", image: "ubuntu:20.04", expect_pkg: 1, expect_modphp: 1, install: "rm -f /etc/dpkg/dpkg.cfg.d/docker* /etc/dpkg/dpkg.cfg.d/excludes; apt-get update -qq && apt-get install -y -qq python3 php-cli php-fpm libapache2-mod-php" }
