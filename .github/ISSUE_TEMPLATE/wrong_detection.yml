@@ -1,0 +1,23 @@
+name: Wrong detection
+description: The tool said PATCHED, VULNERABLE or REVIEW and that looks wrong.
+labels: [detection]
+body:
+  - type: textarea
+    id: output
+    attributes:
+      label: Output
+      description: "Paste `php-vuln-check scan --format json` (or the images/url command you ran). Remove hostnames if needed."
+      render: json
+    validations: { required: true }
+  - type: input
+    id: platform
+    attributes:
+      label: OS and how PHP was installed
+      placeholder: "Debian 12, php8.2 from the distro / Ubuntu 22.04 with Ondrej PPA / Docker php:8.3-fpm / compiled"
+    validations: { required: true }
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected, and why
+      description: A vendor advisory link or changelog line is the most useful thing here.
+    validations: { required: true }
