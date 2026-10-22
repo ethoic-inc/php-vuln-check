@@ -56,7 +56,7 @@ Try it yourself: `php-vuln-check images examples/demo`.
 
 ## What PHP2Shell is, and who is affected
 
-PHP2Shell is a pair of critical remote code execution bugs in the PHP engine itself: **CVE-2026-109618** and **CVE-2026-109619**, both rated CVSS 9.2. They affect unpatched PHP back to 5.4 that serves web requests (Apache `mod_php` and PHP-FPM are the main cases), and need no login. A fatal error such as running out of memory during a `multipart/form-data` request leaves freed memory in use.
+PHP2Shell is a pair of critical remote code execution bugs in the PHP engine itself: **CVE-2026-109618** and **CVE-2026-109619**, both rated CVSS 9.2. PHP's own advisories ([GHSA-w8hw-w9fx-j79w](https://github.com/php/php-src/security/advisories/GHSA-w8hw-w9fx-j79w) and [GHSA-6wmf-4rv5-p3rp](https://github.com/php/php-src/security/advisories/GHSA-6wmf-4rv5-p3rp)) list every release below 8.2.35, 8.3.36, 8.4.27 and 8.5.12 as affected, and no login is needed. [Sansec](https://sansec.io/research/php2shell) reports the bugs reach back to PHP 5.4; Apache `mod_php` and PHP-FPM are the main cases. A fatal error such as running out of memory during a `multipart/form-data` request leaves freed memory in use.
 
 | PHP branch | Fixed in | What to do |
 |---|---|---|
@@ -64,9 +64,9 @@ PHP2Shell is a pair of critical remote code execution bugs in the PHP engine its
 | 8.4 | **8.4.27** | upgrade |
 | 8.3 | **8.3.36** | upgrade |
 | 8.2 | **8.2.35** | upgrade |
-| 8.1 and older | no upstream release | use a vendor backport, or move to a supported branch |
+| 8.1 and older | none (not covered by PHP's advisories) | use a vendor backport, or move to a supported branch |
 
-Details and mitigations: [Sansec](https://sansec.io/research/php2shell), [Help Net Security](https://www.helpnetsecurity.com/2026/10/21/php2shell-php-vulnerabilities-patched-cve-2026-109618-cve-2026-109619/), [watchTowr](https://watchtowr.com/intelligence/php-cve-2026-109618-faq/). Reports on how widely it is exploited conflict, so patch rather than wait.
+Sources: PHP's advisories above are the primary record. Analysis and mitigations: [Sansec](https://sansec.io/research/php2shell), [Help Net Security](https://www.helpnetsecurity.com/2026/10/21/php2shell-php-vulnerabilities-patched-cve-2026-109618-cve-2026-109619/), [watchTowr](https://watchtowr.com/intelligence/php-cve-2026-109618-faq/). Reports on how widely it is exploited conflict, so patch rather than wait.
 
 ## What it checks
 
@@ -132,7 +132,7 @@ jobs:
     permissions: { contents: read, security-events: write }
     steps:
       - uses: actions/checkout@v4
-      - uses: ethoic-inc/php-vuln-check@v0.1.1
+      - uses: ethoic-inc/php-vuln-check@v0.1.2
         with:
           fail-on: vulnerable          # or "review" to also fail on floating tags
           sarif-file: php-vuln.sarif
@@ -147,7 +147,7 @@ Findings show up in your repository's Security tab with the Dockerfile line. To 
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/ethoic-inc/php-vuln-check
-    rev: v0.1.1
+    rev: v0.1.2
     hooks:
       - id: php-vuln-check-images
 ```
@@ -174,7 +174,7 @@ Run `php-vuln-check` on the server. If it prints VULNERABLE, the PHP there is be
 8.2.35, 8.3.36, 8.4.27 and 8.5.12 or later. PHP 8.1 and older have no upstream fix, so you need a vendor backport or an upgrade.
 
 **Is PHP 7.4 or 8.1 vulnerable?**
-Yes unless your vendor shipped a backport. Those branches are end-of-life and the PHP project did not release fixes for them.
+Treat them as vulnerable. PHP's advisories only list 8.2 to 8.5, but Sansec reports the bugs reach back to PHP 5.4 and the PHP project has released no fix for older branches. They are safe only if your vendor's changelog names both CVEs.
 
 **Does Ubuntu, Debian or RHEL ship a fixed PHP?**
 Often as a backport on an older version number. `scan` checks the package changelog for both CVE IDs, which is why it can say PATCHED for `8.2.30` on a distro.
@@ -196,7 +196,7 @@ Not yet. Advisories are one entry in the `ADVISORIES` list at the top of `php_vu
 
 ## Contributing
 
-Wrong result on your distro, a package manager we should read, or the next PHP advisory: open an issue or a pull request. Start with [CONTRIBUTING.md](CONTRIBUTING.md). To report a security problem in this tool, see [SECURITY.md](SECURITY.md).
+Wrong result on your distro, a package manager we should read, or the next PHP advisory: open an issue or a pull request. Start with [CONTRIBUTING.md](CONTRIBUTING.md). To report a security problem in this tool, see [SECURITY.md](SECURITY.md). Taking part means following the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 Questions, press or anything else: **hello@ethoic.com**.
 
