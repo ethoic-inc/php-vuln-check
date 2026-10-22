@@ -63,3 +63,38 @@ jobs:
       - run: |
           python3 php_vuln_check.py images examples/demo --format sarif --fail-on never -o out.sarif
           python3 -c "import json; d=json.load(open('out.sarif')); r=d['runs'][0]['results']; assert r and all(x['locations'] for x in r); print(len(r), 'results')"
+
+  action:
+    name: GitHub Action self-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: A vulnerable image fails the gate and writes SARIF
+        id: gate
+        uses: ./
+        with:
+          path: examples/demo/legacy
+          fail-on: vulnerable
+          sarif-file: gate.sarif
+        continue-on-error: true
+      - name: Check the gate failed and the SARIF has the finding
+        env:
+          OUTCOME: ${{ steps.gate.outcome }}
+        run: |
+          test "$OUTCOME" = "failure"
+          python3 -c "import json; d=json.load(open('gate.sarif')); r=d['runs'][0]['results']; assert r and r[0]['level']=='error', r; print('SARIF ok', len(r))"
+      - name: A fixed image passes the gate
+        uses: ./
+        with:
+          path: tests/fixtures/patched
+          fail-on: review
+      - name: A mistyped path fails instead of passing silently
+        id: typo
+        uses: ./
+        with:
+          path: no/such/folder
+        continue-on-error: true
+      - name: Check the typo failed
+        env:
+          OUTCOME: ${{ steps.typo.outcome }}
+        run: test "$OUTCOME" = "failure"

@@ -7,6 +7,8 @@
 ![Python 3.6+](https://img.shields.io/badge/python-3.6%2B-blue)
 ![Dependencies: none](https://img.shields.io/badge/dependencies-none-brightgreen)
 
+**Tested on real systems, not only fixtures.** CI installs PHP packages in Debian 12 and 13, Ubuntu 20.04 to 24.04, AlmaLinux 8 and 9, Rocky 9, Fedora, Amazon Linux, Alpine and the official `php` images, runs the tool there, and runs the unit tests on Python 3.6 to 3.13. It was security-reviewed independently before release.
+
 ## Check your PHP in 10 seconds
 
 ```bash
