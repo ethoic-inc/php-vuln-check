@@ -30,7 +30,7 @@ import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 REPO_URL = "https://github.com/ethoic-inc/php-vuln-check"
 
 VULNERABLE, REVIEW, PATCHED, ERROR, NONE = "VULNERABLE", "REVIEW", "PATCHED", "ERROR", "NONE"
@@ -45,7 +45,7 @@ ADVISORIES = [
         "severity": "critical",
         "cvss": "9.2 (CVSS v4.0)",
         "published": "2026-10-21",
-        # PHP's own advisories list only 8.2 to 8.5; Sansec reports exposure back to 5.4 (older branches get no fix).
+        # PHP's own advisories list only 8.2 to 8.5; Sansec reports exposure back to 5.4 (older branches get no release).
         "min_affected": "5.4.0",
         "fixed": {"8.2": "8.2.35", "8.3": "8.3.36", "8.4": "8.4.27", "8.5": "8.5.12"},
         "summary": (
@@ -56,6 +56,7 @@ ADVISORIES = [
         # Ordered as PHP's advisory ranks them: memory_limit=-1 is its primary config mitigation.
         "mitigations": [
             "Update PHP to a fixed release, or to a vendor build whose changelog lists both CVEs, then restart PHP-FPM / Apache.",
+            "PHP 7.4, 8.0 and 8.1 are end of life with no release, but PHP published source backports on php-src branches (PHP-7.4-CVE-2026-109618-109619, PHP-8.0-CVE-2026-109618-109619 and PHP-8.1-CVE-2026-109618-109619). Build from them or use a vendor backport; older branches get nothing, so upgrade.",
             "Temporary and partial: enforce memory_limit=-1 in admin config (php.ini or php_admin_value, not .user.ini) and cap request body size at the web server; watch memory use.",
             "Temporary and partial: set session.upload_progress.enabled=0, and on PHP 8.5 also fatal_error_backtraces=0, then restart every worker.",
             "Temporary and partial: if the application takes no uploads, block multipart/form-data requests at the web server.",
@@ -73,6 +74,7 @@ ADVISORIES = [
         "references": [
             {"title": "PHP advisory for CVE-2026-109618", "url": "https://github.com/php/php-src/security/advisories/GHSA-w8hw-w9fx-j79w"},
             {"title": "PHP advisory for CVE-2026-109619", "url": "https://github.com/php/php-src/security/advisories/GHSA-6wmf-4rv5-p3rp"},
+            {"title": "PHP source backports for 7.4, 8.0 and 8.1", "url": "https://github.com/php/php-src/tree/PHP-8.1-CVE-2026-109618-109619"},
             {"title": "Ubuntu USN-8948-1", "url": "https://ubuntu.com/security/notices/USN-8948-1"},
             {"title": "Sansec research", "url": "https://sansec.io/research/php2shell"},
             {"title": "Help Net Security", "url": "https://www.helpnetsecurity.com/2026/10/21/php2shell-php-vulnerabilities-patched-cve-2026-109618-cve-2026-109619/"},
@@ -83,7 +85,7 @@ ADVISORIES = [
 ADVISORIES_BY_ID = {a["id"]: a for a in ADVISORIES}
 # The day ADVISORIES (fixed versions and vendor builds) was last checked against the vendors.
 # Bump it with every data update; reports warn once it is older than STALE_AFTER_DAYS.
-DATA_CHECKED = "2026-10-22"
+DATA_CHECKED = "2026-10-23"
 STALE_AFTER_DAYS = 30
 
 CONFIG_KEYS = ("session.upload_progress.enabled", "memory_limit", "fatal_error_backtraces")
@@ -162,7 +164,7 @@ def evaluate(adv, version, backports=None, packaged=False, tail=True):
             return REVIEW, "branch %s is newer than this tool's advisory data; check the PHP release notes" % branch
         if (major, minor) < floor:
             return REVIEW, "%s is older than the documented affected range (PHP %s+) but long end-of-life; upgrade" % (shown, adv["min_affected"].rsplit(".", 1)[0])
-        why = "branch %s is end-of-life and has no upstream fix" % branch
+        why = "branch %s is end-of-life and has no upstream release" % branch
 
     if len(found) == len(cves):
         return PATCHED, "%s, but the vendor changelog lists fixes for %s" % (why, " and ".join(cves))
@@ -191,7 +193,7 @@ def evaluate_branch_only(adv, major, minor):
         return REVIEW, "branch %s is newer than this tool's advisory data" % branch
     if (major, minor) < floor:
         return REVIEW, "branch %s is older than the documented affected range but long end-of-life; upgrade" % branch
-    return VULNERABLE, "branch %s is end-of-life with no upstream fix; pulling a newer image on this branch cannot fix it" % branch
+    return VULNERABLE, "branch %s is end-of-life with no upstream release; pulling a newer image on this branch cannot fix it" % branch
 
 
 def package_upstream_version(pkg_version):
@@ -589,7 +591,7 @@ def fixed_in(adv, version):
             return fixed[branch]
         oldest = min(fixed, key=_tuple)
         if (int(parts[0]), int(parts[1])) < _tuple(oldest)[:2]:
-            return "no upstream fix; move to %s or later, or use a vendor backport" % fixed[oldest]
+            return "no upstream release; move to %s or later, or use a vendor backport" % fixed[oldest]
     return ", ".join(fixed[b] for b in sorted(fixed, key=_tuple))
 
 

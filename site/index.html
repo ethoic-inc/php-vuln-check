@@ -96,7 +96,8 @@ php-vuln-check images .   # audit Dockerfiles, compose files, Kubernetes manifes
       <tr><td>8.4</td><td><strong>8.4.27</strong></td></tr>
       <tr><td>8.3</td><td><strong>8.3.36</strong></td></tr>
       <tr><td>8.2</td><td><strong>8.2.35</strong></td></tr>
-      <tr><td>8.1 and older</td><td>no fix, not covered by PHP's advisories: use a vendor backport or upgrade</td></tr>
+      <tr><td>8.1, 8.0, 7.4</td><td>no release; PHP published source backports on php-src branches. Build from them, use a vendor backport or upgrade</td></tr>
+      <tr><td>7.3 and older</td><td>nothing: upgrade</td></tr>
     </tbody>
   </table>
 
@@ -111,7 +112,7 @@ php-vuln-check images .   # audit Dockerfiles, compose files, Kubernetes manifes
   <h2>Frequently asked questions</h2>
   <details><summary>How do I check if my server is vulnerable to PHP2Shell?</summary><p>Run <code>php-vuln-check</code> on the server. VULNERABLE means the PHP there is below the fix and has no vendor backport. PATCHED means the version is fixed or the vendor changelog names both CVEs.</p></details>
   <details><summary>Does Debian, Ubuntu or RHEL ship a fixed PHP?</summary><p>Often as a backport on an older version number, so PHP 8.2.30 on a distro can be safe. The checker reads the package changelog for both CVE IDs, or compares the package with the fixed build in the vendor's notice, before calling a host patched.</p></details>
-  <details><summary>Is PHP 7.4 or 8.1 vulnerable to CVE-2026-109618?</summary><p>Treat them as vulnerable. PHP's advisories only list 8.2 to 8.5, but Sansec reports the bugs reach back to PHP 5.4 and there is no upstream fix for older branches. They are safe only if your vendor's changelog names both CVEs.</p></details>
+  <details><summary>Is PHP 7.4 or 8.1 vulnerable to CVE-2026-109618?</summary><p>Treat them as vulnerable. PHP's advisories only list 8.2 to 8.5, but Sansec reports the bugs reach back to PHP 5.4 and PHP made no release for older branches (it published source backports for 7.4, 8.0 and 8.1 only). They are safe only if your vendor's changelog names both CVEs, or you built from PHP's backport branch, which this tool cannot see.</p></details>
   <details><summary>Will the checker crash my server?</summary><p>No. It sends no exploit traffic. On a server it reads files and runs <code>php -n -v</code> and <code>php -i</code>; <code>--no-exec</code> skips even that.</p></details>
   <details><summary>How is this different from other PHP2Shell scanners?</summary><p>Active scanners probe a host by deliberately triggering PHP memory exhaustion. php-vuln-check reads versions, changelogs and config instead, so it is safe on production and covers images, pipelines and whole fleets. Use both.</p></details>
 
