@@ -31,7 +31,7 @@ Each release also publishes `SHA256SUMS` so you can verify the file first. On Py
 ```text
 VULNERABLE  php:7.4-apache
             PHP 7.4
-            branch 7.4 is end-of-life with no upstream fix; pulling a newer image on this branch cannot fix it
+            branch 7.4 is end-of-life with no upstream release; pulling a newer image on this branch cannot fix it
             at examples/demo/legacy/Dockerfile:2
 
 VULNERABLE  php:8.3.35-fpm-alpine
@@ -64,7 +64,8 @@ PHP2Shell is a pair of critical remote code execution bugs in the PHP engine its
 | 8.4 | **8.4.27** | upgrade |
 | 8.3 | **8.3.36** | upgrade |
 | 8.2 | **8.2.35** | upgrade |
-| 8.1 and older | none (not covered by PHP's advisories) | use a vendor backport, or move to a supported branch |
+| 8.1, 8.0, 7.4 | no release; PHP published source backports on php-src branches (`PHP-8.1-CVE-2026-109618-109619` and the 8.0 and 7.4 equivalents) | build from them, use a vendor backport, or move to a supported branch |
+| 7.3 and older | nothing | upgrade |
 
 Sources: PHP's advisories above are the primary record. Analysis and mitigations: [Sansec](https://sansec.io/research/php2shell), [Help Net Security](https://www.helpnetsecurity.com/2026/10/21/php2shell-php-vulnerabilities-patched-cve-2026-109618-cve-2026-109619/), [watchTowr](https://watchtowr.com/intelligence/php-cve-2026-109618-faq/). Reports on how widely it is exploited conflict, so patch rather than wait.
 
@@ -134,7 +135,7 @@ jobs:
     permissions: { contents: read, security-events: write }
     steps:
       - uses: actions/checkout@v4
-      - uses: ethoic-inc/php-vuln-check@v0.1.3
+      - uses: ethoic-inc/php-vuln-check@v0.1.4
         with:
           fail-on: vulnerable          # or "review" to also fail on floating tags
           sarif-file: php-vuln.sarif
@@ -149,7 +150,7 @@ Findings show up in your repository's Security tab with the Dockerfile line. To 
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/ethoic-inc/php-vuln-check
-    rev: v0.1.3
+    rev: v0.1.4
     hooks:
       - id: php-vuln-check-images
 ```
@@ -174,10 +175,10 @@ Other CI systems: run `php-vuln-check images . --fail-on vulnerable`. Exit codes
 Run `php-vuln-check` on the server. If it prints VULNERABLE, the PHP there is below the fix and has no vendor backport. If you only see PATCHED, the version is fixed or the vendor changelog names both CVEs.
 
 **Which PHP versions fix CVE-2026-109618 and CVE-2026-109619?**
-8.2.35, 8.3.36, 8.4.27 and 8.5.12 or later. PHP 8.1 and older have no upstream fix, so you need a vendor backport or an upgrade.
+8.2.35, 8.3.36, 8.4.27 and 8.5.12 or later. PHP 8.1 and older get no release. PHP did publish source backports for 7.4, 8.0 and 8.1 on php-src branches; for anything else you need a vendor backport or an upgrade.
 
 **Is PHP 7.4 or 8.1 vulnerable?**
-Treat them as vulnerable. PHP's advisories only list 8.2 to 8.5, but Sansec reports the bugs reach back to PHP 5.4 and the PHP project has released no fix for older branches. They are safe only if your vendor's changelog names both CVEs.
+Treat them as vulnerable. PHP's advisories only list 8.2 to 8.5, but Sansec reports the bugs reach back to PHP 5.4 and the PHP project made no release for older branches (it published source backports for 7.4, 8.0 and 8.1 only). They are safe only if your vendor's changelog names both CVEs, or you built from PHP's backport branch, which this tool cannot see.
 
 **Does Ubuntu, Debian or RHEL ship a fixed PHP?**
 Often as a backport on an older version number. `scan` checks the package changelog for both CVE IDs, which is why it can say PATCHED for `8.2.30` on a distro.

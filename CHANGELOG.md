@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.4 (2026-10-23)
+
+- Accuracy fix: older PHP branches have **no upstream release**, not "no fix". PHP published official source backports for 7.4, 8.0 and 8.1 on php-src branches (`PHP-7.4-CVE-2026-109618-109619`, `PHP-8.0-CVE-2026-109618-109619`, `PHP-8.1-CVE-2026-109618-109619`). The tool's messages, its "What to do" block, its references, the README and the site now say so. A build made from those branches still reads as vulnerable because its version number does not change.
+- Advisory data re-checked on 2026-10-23.
+- No change in detection behavior.
+
 ## 0.1.3 (2026-10-22)
 
 - `scan`: when a Debian/Ubuntu package changelog is not installed (Docker's `ubuntu` and `debian` images strip `/usr/share/doc`), compare the package with the fixed builds in the vendor notice (`vendor_fixed` in `ADVISORIES`, starting with Ubuntu USN-8948-1). Before, these installs were always REVIEW. A fixed build only counts for the same build line, so Sury or other-release builds are never judged against it.

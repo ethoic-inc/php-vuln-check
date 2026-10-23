@@ -112,7 +112,7 @@ class VersionLogic(unittest.TestCase):
 
     def test_fixed_in_hint(self):
         self.assertEqual(pvc.fixed_in(ADV, "8.3.30"), "8.3.36")
-        self.assertIn("no upstream fix", pvc.fixed_in(ADV, "7.4.33"))
+        self.assertIn("no upstream release", pvc.fixed_in(ADV, "7.4.33"))
         self.assertIn("8.2.35", pvc.fixed_in(ADV, None))
         self.assertIn("8.2.35", pvc.fixed_in(ADV, "x.y"))
 
@@ -927,6 +927,10 @@ class Output(unittest.TestCase):
 
 
 class Sourcing(unittest.TestCase):
+    def test_source_backport_branches_for_eol_php_are_mentioned(self):
+        for branch in ("PHP-7.4-CVE-2026-109618-109619", "PHP-8.0-CVE-2026-109618-109619", "PHP-8.1-CVE-2026-109618-109619"):
+            self.assertTrue(any(branch in m for m in ADV["mitigations"]), branch)
+
     def test_primary_php_advisories_come_first(self):
         urls = [r["url"] for r in ADV["references"][:2]]
         self.assertTrue(all(u.startswith("https://github.com/php/php-src/security/advisories/GHSA-") for u in urls), urls)
