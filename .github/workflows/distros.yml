@@ -49,6 +49,7 @@ jobs:
           # Oldest Python interpreters we claim to support. No PHP here: unit tests, images and output only.
           - { name: "python 3.6 (unit tests)", image: "python:3.6-slim", skip_php: 1, install: "true" }
           - { name: "python 3.7 (unit tests)", image: "python:3.7-slim", skip_php: 1, install: "true" }
+          - { name: "python 3.8 (unit tests)", image: "python:3.8-slim", skip_php: 1, install: "true" }
           # Official PHP images: compiled from source, no distro package owns the binary.
           - { name: "official php:8.1-cli", image: "php:8.1-cli", install: "apt-get update -qq && apt-get install -y -qq python3" }
           - { name: "official php:8.3-apache", image: "php:8.3-apache", install: "apt-get update -qq && apt-get install -y -qq python3" }
